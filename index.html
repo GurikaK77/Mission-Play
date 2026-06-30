@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ka">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>👑 Elite Gaming | Discord სტილის პროფილები</title>
+    <title>🎯 Mission: Play | Premium Gaming Hub</title>
     <style>
         :root {
             --bg: #06060a;
@@ -60,7 +60,7 @@
             z-index: 1;
         }
 
-        /* ===== ნავიგაცია ===== */
+        /* ===== NAVIGATION ===== */
         .navbar {
             position: fixed;
             top: 0;
@@ -100,8 +100,7 @@
             animation: logoPulse 2.5s ease-in-out infinite;
         }
         @keyframes logoPulse {
-            0%,
-            100% {
+            0%, 100% {
                 transform: scale(1);
                 filter: drop-shadow(0 0 8px rgba(240, 208, 120, 0.6));
             }
@@ -189,7 +188,7 @@
             transform: rotate(-45deg) translate(6px, -6px);
         }
 
-        /* ===== ჰერო ===== */
+        /* ===== HERO ===== */
         .hero {
             min-height: 100vh;
             display: flex;
@@ -238,22 +237,12 @@
             transform: translateY(-8px) scale(1.08);
         }
         @keyframes floatProfile {
-            0%,
-            100% {
-                transform: translateY(0);
-            }
-            50% {
-                transform: translateY(-8px);
-            }
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
         }
         @keyframes floatProfileDev {
-            0%,
-            100% {
-                transform: translateY(0) scale(1.08);
-            }
-            50% {
-                transform: translateY(-10px) scale(1.08);
-            }
+            0%, 100% { transform: translateY(0) scale(1.08); }
+            50% { transform: translateY(-10px) scale(1.08); }
         }
         .profile-avatar {
             width: 70px;
@@ -297,14 +286,8 @@
             animation: fadeInUp 1s ease-out;
         }
         @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         .hero-badge {
             display: inline-block;
@@ -375,9 +358,7 @@
             opacity: 0;
             transition: opacity 0.4s;
         }
-        .btn-primary:hover::before {
-            opacity: 1;
-        }
+        .btn-primary:hover::before { opacity: 1; }
         .btn-secondary {
             background: transparent;
             color: var(--gold-light);
@@ -398,7 +379,7 @@
             transform: translateY(-3px);
         }
 
-        /* ===== სექციები ===== */
+        /* ===== SECTIONS ===== */
         .section-title {
             text-align: center;
             margin-bottom: 50px;
@@ -438,7 +419,6 @@
             font-weight: 600;
             font-size: 0.9rem;
             margin-top: 10px;
-            transition: all 0.3s ease;
         }
         .filter-indicator button {
             background: none;
@@ -450,28 +430,27 @@
             margin-left: 4px;
             transition: color 0.2s;
         }
-        .filter-indicator button:hover {
-            color: #fff;
-        }
+        .filter-indicator button:hover { color: #fff; }
 
         .games-section {
-            padding: 70px 30px 80px;
+            padding: 70px 30px 40px;
             max-width: 1300px;
             margin: 0 auto;
         }
-        .games-grid {
+        .games-grid, .coming-soon-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 28px;
         }
-        .game-card {
+        .coming-soon-grid {
+            margin-top: 40px;
+        }
+        .game-card, .placeholder-card {
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: var(--radius);
             overflow: hidden;
             transition: all var(--transition);
-            cursor: pointer;
-            position: relative;
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
             display: flex;
@@ -480,34 +459,35 @@
             animation: cardAppear 0.4s ease-out forwards;
             opacity: 0;
         }
-        .game-card:hover {
+        .game-card:hover, .placeholder-card:hover {
             transform: translateY(-12px);
             border-color: rgba(212, 167, 69, 0.55);
             box-shadow: var(--glow-card), 0 20px 50px rgba(0, 0, 0, 0.5);
         }
-        .game-card-image {
+        .game-card-image, .placeholder-image {
             position: relative;
             width: 100%;
             height: 200px;
             overflow: hidden;
             flex-shrink: 0;
         }
-        .game-card-image .img-bg {
+        .game-card-image .img-bg, .placeholder-image .img-bg {
             width: 100%;
             height: 100%;
             object-fit: cover;
             transition: transform 0.6s ease;
             display: block;
         }
-        .game-card:hover .game-card-image .img-bg {
+        .game-card:hover .game-card-image .img-bg,
+        .placeholder-card:hover .placeholder-image .img-bg {
             transform: scale(1.08);
         }
-        .game-card-image .overlay {
+        .game-card-image .overlay, .placeholder-image .overlay {
             position: absolute;
             inset: 0;
             background: linear-gradient(180deg, transparent 40%, rgba(6, 6, 10, 0.85) 100%);
         }
-        .game-card-image .game-badge {
+        .game-badge, .placeholder-badge {
             position: absolute;
             top: 14px;
             right: 14px;
@@ -521,18 +501,24 @@
             letter-spacing: 1px;
             border: 1px solid rgba(212, 167, 69, 0.4);
         }
-        .game-card-body {
+        .placeholder-badge {
+            background: rgba(30, 30, 50, 0.8);
+            color: #aaa;
+            border-color: rgba(255,255,255,0.1);
+        }
+        .game-card-body, .placeholder-body {
             padding: 20px 22px 22px;
             display: flex;
             flex-direction: column;
             flex-grow: 1;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
         }
-        .game-card-body h3 {
-            font-size: 1.25rem;
-            font-weight: 700;
+        .game-card-body h3, .placeholder-body .lock-icon {
+            font-size: 2.5rem;
             color: #f0e6d3;
-            margin-bottom: 6px;
-            letter-spacing: -0.3px;
+            margin-bottom: 10px;
         }
         .game-card-body .genre {
             font-size: 0.8rem;
@@ -557,10 +543,7 @@
             font-size: 0.8rem;
             color: #aaa;
         }
-        .game-card-body .rating {
-            color: var(--gold-light);
-            font-weight: 700;
-        }
+        .game-card-body .rating { color: var(--gold-light); font-weight: 700; }
         .btn-download {
             display: block;
             width: 100%;
@@ -584,11 +567,14 @@
             box-shadow: 0 0 25px rgba(212, 167, 69, 0.45);
             letter-spacing: 1px;
         }
-        .btn-download .icon {
-            margin-right: 6px;
+        .coming-soon-text {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #888;
+            margin-top: 5px;
         }
 
-        /* ===== კატეგორიები (ცენტრში) ===== */
+        /* ===== CATEGORIES (CENTERED) ===== */
         .categories-section {
             padding: 50px 30px 70px;
             max-width: 900px;
@@ -619,8 +605,7 @@
             flex: 1;
             max-width: 200px;
         }
-        .category-card:hover,
-        .category-card.active {
+        .category-card:hover, .category-card.active {
             border-color: var(--gold);
             box-shadow: 0 0 30px rgba(212, 167, 69, 0.35);
             transform: translateY(-6px);
@@ -640,7 +625,7 @@
             text-transform: capitalize;
         }
 
-        /* ===== ფუტერი ===== */
+        /* ===== FOOTER ===== */
         .footer {
             background: rgba(10, 10, 18, 0.9);
             border-top: 1px solid rgba(212, 167, 69, 0.2);
@@ -648,10 +633,7 @@
             text-align: center;
             backdrop-filter: blur(20px);
         }
-        .footer-content {
-            max-width: 800px;
-            margin: 0 auto;
-        }
+        .footer-content { max-width: 800px; margin: 0 auto; }
         .footer-links {
             display: flex;
             gap: 24px;
@@ -665,18 +647,11 @@
             transition: color 0.3s;
             font-size: 0.9rem;
         }
-        .footer-links a:hover {
-            color: var(--gold-light);
-        }
-        .footer p {
-            color: #555;
-            font-size: 0.8rem;
-        }
-        .footer .gold-text {
-            color: var(--gold);
-        }
+        .footer-links a:hover { color: var(--gold-light); }
+        .footer p { color: #555; font-size: 0.8rem; }
+        .footer .gold-text { color: var(--gold); }
 
-        /* ===== მობილური ===== */
+        /* ===== MOBILE ===== */
         .mobile-menu {
             position: fixed;
             top: 0;
@@ -694,9 +669,7 @@
             flex-direction: column;
             gap: 20px;
         }
-        .mobile-menu.active {
-            right: 0;
-        }
+        .mobile-menu.active { right: 0; }
         .mobile-menu a {
             color: #e0dcd0;
             text-decoration: none;
@@ -706,9 +679,7 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             transition: color 0.3s;
         }
-        .mobile-menu a:hover {
-            color: var(--gold-light);
-        }
+        .mobile-menu a:hover { color: var(--gold-light); }
         .mobile-overlay {
             position: fixed;
             inset: 0;
@@ -718,94 +689,35 @@
             pointer-events: none;
             transition: opacity 0.4s;
         }
-        .mobile-overlay.active {
-            opacity: 1;
-            pointer-events: all;
-        }
+        .mobile-overlay.active { opacity: 1; pointer-events: all; }
 
         @media (max-width: 900px) {
-            .nav-links {
-                display: none;
-            }
-            .hamburger {
-                display: flex;
-            }
-            .hero {
-                padding: 120px 20px 50px;
-            }
-            .profiles-container {
-                gap: 15px;
-            }
-            .profile-card {
-                padding: 15px 20px;
-                min-width: 120px;
-            }
-            .games-grid {
-                grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-                gap: 20px;
-            }
-            .categories-flex {
-                gap: 14px;
-            }
-            .category-card {
-                min-width: 120px;
-                max-width: 160px;
-                padding: 20px 14px;
-            }
+            .nav-links { display: none; }
+            .hamburger { display: flex; }
+            .hero { padding: 120px 20px 50px; }
+            .profiles-container { gap: 15px; }
+            .profile-card { padding: 15px 20px; min-width: 120px; }
+            .games-grid, .coming-soon-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+            .categories-flex { gap: 14px; }
+            .category-card { min-width: 120px; max-width: 160px; padding: 20px 14px; }
         }
         @media (max-width: 500px) {
-            .navbar {
-                padding: 10px 16px;
-            }
-            .hero h1 {
-                font-size: 2.2rem;
-            }
-            .hero p {
-                font-size: 1rem;
-            }
-            .profiles-container {
-                flex-direction: column;
-                gap: 16px;
-            }
-            .profile-card:nth-child(2) {
-                transform: scale(1);
-                animation: floatProfile 3s ease-in-out infinite;
-            }
-            .profile-card:nth-child(2):hover {
-                transform: translateY(-8px) scale(1);
-            }
-            .games-grid {
-                grid-template-columns: 1fr;
-                gap: 16px;
-            }
-            .games-section,
-            .categories-section {
-                padding: 40px 14px 50px;
-            }
-            .btn-primary,
-            .btn-secondary {
-                padding: 12px 24px;
-                font-size: 0.9rem;
-            }
-            .categories-flex {
-                flex-direction: column;
-                align-items: center;
-            }
-            .category-card {
-                max-width: 280px;
-                width: 100%;
-            }
+            .navbar { padding: 10px 16px; }
+            .hero h1 { font-size: 2.2rem; }
+            .hero p { font-size: 1rem; }
+            .profiles-container { flex-direction: column; gap: 16px; }
+            .profile-card:nth-child(2) { transform: scale(1); animation: floatProfile 3s ease-in-out infinite; }
+            .profile-card:nth-child(2):hover { transform: translateY(-8px) scale(1); }
+            .games-grid, .coming-soon-grid { grid-template-columns: 1fr; gap: 16px; }
+            .games-section, .categories-section { padding: 40px 14px 50px; }
+            .btn-primary, .btn-secondary { padding: 12px 24px; font-size: 0.9rem; }
+            .categories-flex { flex-direction: column; align-items: center; }
+            .category-card { max-width: 280px; width: 100%; }
         }
 
         @keyframes cardAppear {
-            from {
-                opacity: 0;
-                transform: translateY(40px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
@@ -813,88 +725,74 @@
     <canvas id="particles-canvas"></canvas>
     <div class="mobile-overlay" id="mobileOverlay"></div>
     <div class="mobile-menu" id="mobileMenu">
-        <a href="#home" onclick="closeMenu()">🏠 მთავარი</a>
-        <a href="#games" onclick="closeMenu()">🎮 თამაშები</a>
-        <a href="#categories" onclick="closeMenu()">📂 კატეგორიები</a>
-        <a href="#downloads" onclick="closeMenu()" style="background:linear-gradient(135deg,#8b6914,#d4a745);color:#000;text-align:center;border-radius:30px;padding:12px;margin-top:10px;border:none;font-weight:700;">🔥 უფასო თამაშები</a>
+        <a href="#home" onclick="closeMenu()">🏠 Home</a>
+        <a href="#games" onclick="closeMenu()">🎮 Games</a>
+        <a href="#categories" onclick="closeMenu()">📂 Categories</a>
+        <a href="#downloads" onclick="closeMenu()" style="background:linear-gradient(135deg,#8b6914,#d4a745);color:#000;text-align:center;border-radius:30px;padding:12px;margin-top:10px;border:none;font-weight:700;">🔥 Free Games</a>
     </div>
 
     <div class="main-wrapper">
         <nav class="navbar" id="navbar">
             <a href="#home" class="nav-logo">
-                <span class="logo-icon">👑</span> Elite<span style="color:#d4a745;">Game</span>
+                <span class="logo-icon">🎯</span> Mission<span style="color:#d4a745;">Play</span>
             </a>
             <ul class="nav-links">
-                <li><a href="#home">მთავარი</a></li>
-                <li><a href="#games">თამაშები</a></li>
-                <li><a href="#categories">კატეგორიები</a></li>
-                <li><a href="#downloads" class="btn-nav">⬇ ჩამოტვირთვა</a></li>
+                <li><a href="#home">Home</a></li>
+                <li><a href="#games">Games</a></li>
+                <li><a href="#categories">Categories</a></li>
+                <li><a href="#downloads" class="btn-nav">⬇ Downloads</a></li>
             </ul>
             <div class="hamburger" id="hamburger" onclick="toggleMenu()">
                 <span></span><span></span><span></span>
             </div>
         </nav>
 
-        <!-- ჰერო პროფილებით -->
         <section class="hero" id="home">
-            <!-- 3 პროფილის ქარდი -->
             <div class="profiles-container">
-                <!-- მარცხენა მოთამაშე -->
                 <div class="profile-card">
-                    <img class="profile-avatar" src="https://cdn.discordapp.com/avatars/1063112261931110423/7a56ce3ede9ae5400c3b7f40989cf783.png?size=4096" alt="Player"
-                    onerror="this.style.display='none'; this.parentElement.querySelector('.fallback-avatar').style.display='flex'">
-                    <div class="fallback-avatar" style="display:none; width:70px;height:70px;border-radius:50%;background:#2a2040;align-items:center;justify-content:center;font-size:2rem;">🦸</div>
+                    <img class="profile-avatar" src="https://cdn.discordapp.com/avatars/1063112261931110423/7a56ce3ede9ae5400c3b7f40989cf783.png?size=4096" alt="DarkTeddy">
                     <span class="profile-name">DarkTeddy</span>
                     <span class="profile-role">Gamer</span>
                 </div>
-                <!-- შუა დეველოპერი -->
                 <div class="profile-card">
-                    <img class="profile-avatar" src="https://cdn.discordapp.com/avatars/1232394805213003817/548ebf47f06465022b97706775cbcfa9.png?size=4096" alt="Developer"
-                    onerror="this.style.display='none'; this.parentElement.querySelector('.fallback-avatar').style.display='flex'">
-                    <div class="fallback-avatar" style="display:none; width:80px;height:80px;border-radius:50%;background:#2a2040;align-items:center;justify-content:center;font-size:2.2rem;">👨‍💻</div>
+                    <img class="profile-avatar" src="https://cdn.discordapp.com/avatars/1232394805213003817/548ebf47f06465022b97706775cbcfa9.png?size=4096" alt="OverRuled">
                     <span class="profile-name">OverRuled</span>
                     <span class="profile-role">Fullstack Dev</span>
                     <span class="developer-badge">👑 Developer</span>
                 </div>
-                <!-- მარჯვენა მოთამაშე -->
                 <div class="profile-card">
-                    <img class="profile-avatar" src="https://cdn.discordapp.com/avatars/1518641453373460572/f6ee5cfbc901926edc0576960ec91a78.png?size=4096" alt="Player"
-                    onerror="this.style.display='none'; this.parentElement.querySelector('.fallback-avatar').style.display='flex'">
-                    <div class="fallback-avatar" style="display:none; width:70px;height:70px;border-radius:50%;background:#2a2040;align-items:center;justify-content:center;font-size:2rem;">🎮</div>
+                    <img class="profile-avatar" src="https://cdn.discordapp.com/avatars/1518641453373460572/f6ee5cfbc901926edc0576960ec91a78.png?size=4096" alt="ArLovelyy">
                     <span class="profile-name">ArLovelyy</span>
                     <span class="profile-role">Gamer</span>
                 </div>
             </div>
-
             <div class="hero-content">
-                <div class="hero-badge">🏆 პრემიუმ გეიმინგი 2026</div>
-                <h1>აირჩიე შენი<br>საყვარელი ჟანრი</h1>
-                <p>ჩამოტვირთე საუკეთესო თამაშები — მანქანები, ჰორორი, გადარჩენა. კატეგორიის მიხედვით ფილტრაცია მარტივია.</p>
+                <div class="hero-badge">🏆 Premium Gaming 2026</div>
+                <h1>Choose Your<br>Favorite Genre</h1>
+                <p>Download the best games — cars, horror, survival. Filter by category easily and start playing.</p>
                 <div class="hero-buttons">
-                    <a href="#games" class="btn-primary">🎮 თამაშების ნახვა</a>
-                    <a href="#categories" class="btn-secondary">📂 კატეგორიები</a>
+                    <a href="#games" class="btn-primary">🎮 Browse Games</a>
+                    <a href="#categories" class="btn-secondary">📂 Categories</a>
                 </div>
             </div>
         </section>
 
-        <!-- კატეგორიები (ცენტრში) -->
         <section class="categories-section" id="categories">
             <div class="section-title">
-                <div class="label">📂 ჟანრები</div>
-                <h2>კატეგორიები</h2>
+                <div class="label">📂 Genres</div>
+                <h2>Categories</h2>
                 <div class="line"></div>
             </div>
             <div class="categories-flex" id="categoriesGrid"></div>
             <div style="text-align: center; margin-top: 25px;">
-                <button id="resetFilterBtn" class="btn-secondary" style="display:none;">📋 ყველა თამაშის ჩვენება</button>
+                <button id="resetFilterBtn" class="btn-secondary" style="display:none;">📋 Show All Games</button>
             </div>
         </section>
 
-        <!-- თამაშები -->
         <section class="games-section" id="games">
             <div class="section-title">
-                <div class="label">🎯 თამაშები</div>
-                <h2 id="gamesHeading">ყველა თამაში</h2>
+                <div class="label">🎯 Games</div>
+                <h2 id="gamesHeading">All Games</h2>
                 <div class="line"></div>
                 <div id="filterIndicator" class="filter-indicator" style="display: none;">
                     <span id="filterLabel"></span>
@@ -902,34 +800,82 @@
                 </div>
             </div>
             <div class="games-grid" id="gamesGrid"></div>
+            <!-- COMING SOON SECTION -->
+            <div style="margin-top: 50px;">
+                <div class="section-title">
+                    <div class="label">🔮 Soon</div>
+                    <h2>More Games Coming</h2>
+                    <div class="line"></div>
+                </div>
+                <div class="coming-soon-grid" id="comingSoonGrid"></div>
+            </div>
         </section>
 
         <footer class="footer">
             <div class="footer-content">
                 <div class="footer-links">
-                    <a href="#home">მთავარი</a>
-                    <a href="#games">თამაშები</a>
-                    <a href="#categories">კატეგორიები</a>
-                    <a href="#">წესები</a>
-                    <a href="#">კონტაქტი</a>
+                    <a href="#home">Home</a>
+                    <a href="#games">Games</a>
+                    <a href="#categories">Categories</a>
+                    <a href="#">Terms</a>
+                    <a href="#">Contact</a>
                 </div>
-                <p>© 2026 <span class="gold-text">EliteGame</span> — ყველა უფლება დაცულია</p>
+                <p>© 2026 <span class="gold-text">Mission: Play</span> — All rights reserved</p>
             </div>
         </footer>
     </div>
 
     <script>
-        // ==================== თამაშების მონაცემები ====================
+        // ==================== GAMES DATA (only the 4 real games) ====================
         const gamesData = [
-            { id: 1, title: 'Cyber Legends 2077', genre: 'RPG / Open World', desc: 'ფუტურისტული ღია სამყარო, ღრმა სიუჟეტი.', rating: '9.7', downloads: '2.3M', image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&h=350&fit=crop', link: 'https://store.steampowered.com/app/1091500/Cyberpunk_2077/', badge: '🔥 ჰიტი', category: 'horror' },
-            { id: 2, title: 'Shadow Arena', genre: 'Battle Royale', desc: 'ინტენსიური PvP 100 მოთამაშით.', rating: '9.2', downloads: '5.1M', image: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=600&h=350&fit=crop', link: 'https://store.epicgames.com/en-US/p/fortnite', badge: '🎯 ტოპ', category: 'survival' },
-            { id: 3, title: 'Mystic Quest Online', genre: 'MMORPG', desc: 'მაგიური სამყარო, ეპიკური ბოსები.', rating: '9.5', downloads: '3.8M', image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600&h=350&fit=crop', link: 'https://store.steampowered.com/app/1599340/Lost_Ark/', badge: '⭐ რჩეული', category: 'survival' },
-            { id: 4, title: 'Speed Horizon', genre: 'Racing / Sim', desc: '200+ მანქანა, ღია გზები.', rating: '8.9', downloads: '1.7M', image: 'https://images.unsplash.com/photo-1544829728-e5cb9eedc20e?w=600&h=350&fit=crop', link: 'https://store.steampowered.com/app/1551360/Forza_Horizon_5/', badge: '🏎️ ახალი', category: 'cars' },
-            { id: 5, title: 'Dungeon Survivor', genre: 'Roguelike', desc: 'დუნდულები, ნადავლი, გაძლიერება.', rating: '9.1', downloads: '890K', image: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600&h=350&fit=crop', link: 'https://store.steampowered.com/app/1794680/Vampire_Survivors/', badge: '💀 ჰარდკორ', category: 'survival' },
-            { id: 6, title: 'Galaxy Empires', genre: 'Strategy', desc: 'კოსმოსური იმპერია, პლანეტები.', rating: '9.4', downloads: '2.0M', image: 'https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=600&h=350&fit=crop', link: 'https://store.steampowered.com/app/281990/Stellaris/', badge: '🌌 ეპიკური', category: 'horror' },
-            { id: 7, title: 'Turbo Drift', genre: 'Racing', desc: 'ქუჩის რბოლები, დრიფტი.', rating: '8.7', downloads: '1.2M', image: 'https://images.unsplash.com/photo-1504215680853-026ed2a45def?w=600&h=350&fit=crop', link: 'https://store.steampowered.com/app/1551360/Forza_Horizon_5/', badge: '🚗 ახალი', category: 'cars' },
-            { id: 8, title: 'Phobia: Dark Descent', genre: 'Psychological Horror', desc: 'საშინელი ფსიქოლოგიური ჰორორი.', rating: '9.3', downloads: '980K', image: 'https://images.unsplash.com/photo-1604152135872-9a6701d20e13?w=600&h=350&fit=crop', link: 'https://store.steampowered.com/app/238320/Outlast/', badge: '👻 ჰორორი', category: 'horror' },
-            { id: 9, title: 'Frostland', genre: 'Survival', desc: 'ყინულოვანი უდაბნო, ააშენე თავშესაფარი.', rating: '9.0', downloads: '1.5M', image: 'https://images.unsplash.com/photo-1509822929063-6b6cfc9b42f2?w=600&h=350&fit=crop', link: 'https://store.steampowered.com/app/305620/The_Long_Dark/', badge: '❄️ გადარჩენა', category: 'survival' }
+            { 
+                id: 1, 
+                title: 'Sons Of The Forest', 
+                genre: 'Horror / Survival', 
+                desc: 'Fight to survive in a cannibal-infested forest. Build, craft, and defend yourself against terrifying mutants.', 
+                rating: '9.4', 
+                downloads: '2.1M', 
+                image: 'https://wallpapercave.com/wp/wp12152116.jpg', 
+                link: 'https://gtorr.net/index.php?newsid=3928', 
+                badge: '🔥 Hot', 
+                category: 'horror'
+            },
+            { 
+                id: 2, 
+                title: '7 Days to Die', 
+                genre: 'Survival / Zombie', 
+                desc: 'The ultimate zombie survival sandbox. Explore, scavenge, build, and fight off hordes every 7 days.', 
+                rating: '8.9', 
+                downloads: '4.5M', 
+                image: 'https://wallpapercave.com/wp/wp2082801.jpg', 
+                link: 'https://gtorr.net/index.php?newsid=2659', 
+                badge: '🎯 Top', 
+                category: 'survival'
+            },
+            { 
+                id: 3, 
+                title: 'Drive Beyond Horizons', 
+                genre: 'Racing / Open World', 
+                desc: 'Experience limitless driving across diverse landscapes. Customize your car and dominate the roads.', 
+                rating: '9.1', 
+                downloads: '1.8M', 
+                image: 'https://images.unsplash.com/photo-1494905998402-395d579af36f?w=600&h=350&fit=crop', 
+                link: 'https://gtorr.net/index.php?newsid=4958', 
+                badge: '⭐ Featured', 
+                category: 'cars'
+            },
+            { 
+                id: 4, 
+                title: 'VEIN', 
+                genre: 'Racing / Arcade', 
+                desc: 'High-speed underground racing with a retro vibe. Drift through neon-lit streets and climb the leaderboard.', 
+                rating: '8.7', 
+                downloads: '920K', 
+                image: 'data:image/webp;base64,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', 
+                link: 'https://gtorr.net/index.php?newsid=5077', 
+                badge: '🏎️ New', 
+                category: 'cars'
+            }
         ];
 
         const categoriesData = [
@@ -946,12 +892,13 @@
         const filterLabel = document.getElementById('filterLabel');
         const clearFilterBtn = document.getElementById('clearFilterBtn');
         const resetFilterBtn = document.getElementById('resetFilterBtn');
+        const comingSoonGrid = document.getElementById('comingSoonGrid');
 
         function createGameCard(game) {
             return `
                 <div class="game-card">
                     <div class="game-card-image">
-                        <img class="img-bg" src="${game.image}" alt="${game.title}" onerror="this.parentElement.innerHTML='<div style=width:100%;height:100%;background:linear-gradient(135deg,#1a1040,#0d1b2a);display:flex;align-items:center;justify-content:center;font-size:4rem;'>🎮</div>'">
+                        <img class="img-bg" src="${game.image}" alt="${game.title}">
                         <div class="overlay"></div>
                         <span class="game-badge">${game.badge}</span>
                     </div>
@@ -964,8 +911,24 @@
                             <span>📥 ${game.downloads}</span>
                         </div>
                         <a href="${game.link}" target="_blank" rel="noopener" class="btn-download">
-                            <span class="icon">⬇️</span> ჩამოტვირთვა
+                            <span class="icon">⬇️</span> Download
                         </a>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createComingSoonCard(index) {
+            return `
+                <div class="placeholder-card">
+                    <div class="placeholder-image">
+                        <img class="img-bg" src="https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600&h=350&fit=crop" alt="Coming Soon">
+                        <div class="overlay"></div>
+                        <span class="placeholder-badge">🔒 Locked</span>
+                    </div>
+                    <div class="placeholder-body">
+                        <span class="lock-icon">❓</span>
+                        <div class="coming-soon-text">New Game Coming Soon</div>
                     </div>
                 </div>
             `;
@@ -988,11 +951,11 @@
 
             if (filter) {
                 gamesHeading.textContent = `${filter} (${filtered.length})`;
-                filterLabel.textContent = `ნაჩვენებია: ${filter}`;
+                filterLabel.textContent = `Showing: ${filter}`;
                 filterIndicator.style.display = 'inline-flex';
                 resetFilterBtn.style.display = 'inline-block';
             } else {
-                gamesHeading.textContent = 'ყველა თამაში';
+                gamesHeading.textContent = 'All Games';
                 filterIndicator.style.display = 'none';
                 resetFilterBtn.style.display = 'none';
             }
@@ -1000,6 +963,16 @@
             document.querySelectorAll('.category-card').forEach(card => {
                 card.classList.toggle('active', card.getAttribute('data-category') === filter);
             });
+        }
+
+        function renderComingSoon() {
+            // Show 3 placeholder cards (unknown games)
+            const placeholderCount = 3;
+            let html = '';
+            for (let i = 0; i < placeholderCount; i++) {
+                html += createComingSoonCard(i);
+            }
+            comingSoonGrid.innerHTML = html;
         }
 
         function setFilter(category) {
@@ -1024,11 +997,12 @@
         clearFilterBtn.addEventListener('click', clearFilter);
         resetFilterBtn.addEventListener('click', clearFilter);
 
-        // ინიციალიზაცია
+        // Initialize
         categoriesGrid.innerHTML = categoriesData.map(createCategoryCard).join('');
         renderGames();
+        renderComingSoon();
 
-        // ===== მობილური მენიუ =====
+        // ===== MOBILE MENU =====
         const hamburger = document.getElementById('hamburger');
         const mobileMenu = document.getElementById('mobileMenu');
         const mobileOverlay = document.getElementById('mobileOverlay');
@@ -1047,12 +1021,11 @@
         mobileOverlay.addEventListener('click', closeMenu);
         document.querySelectorAll('.mobile-menu a').forEach(link => link.addEventListener('click', closeMenu));
 
-        // ===== ნავბარის სქროლი =====
         window.addEventListener('scroll', () => {
             document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 60);
         });
 
-        // ===== ნაწილაკები =====
+        // ===== PARTICLES =====
         const canvas = document.getElementById('particles-canvas');
         const ctx = canvas.getContext('2d');
         let particles = [];
@@ -1116,7 +1089,6 @@
         }
         animateParticles();
 
-        // ===== გლუვი სქროლი =====
         document.querySelectorAll('a[href^="#"]').forEach(a => {
             a.addEventListener('click', function(e) {
                 const href = this.getAttribute('href');
