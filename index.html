@@ -830,8 +830,24 @@
     <script>
         // ==================== GAMES DATA (only the 4 real games) ====================
         const gamesData = [
-            { 
+            
+        
+        
+        { 
                 id: 1, 
+                title: 'DayZ', 
+                genre: 'Survival', 
+                desc: 'Fight to survive in a cannibal-infested forest. Build, craft, and defend yourself against terrifying mutants.', 
+                rating: '9.9', 
+                downloads: '2.1M', 
+                image: 'data:image/jpeg;base64,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', 
+                link: 'https://dayzavr.ru/download.html', 
+                badge: '🔥 Hot', 
+                category: 'survival'
+            },
+        
+        { 
+                id: 2, 
                 title: 'Sons Of The Forest', 
                 genre: 'Horror / Survival', 
                 desc: 'Fight to survive in a cannibal-infested forest. Build, craft, and defend yourself against terrifying mutants.', 
@@ -842,56 +858,10 @@
                 badge: '🔥 Hot', 
                 category: 'survival'
             },
+            
+            
             { 
                 id: 2, 
-                title: '7 Days to Die', 
-                genre: 'Survival / Zombie', 
-                desc: 'The ultimate zombie survival sandbox. Explore, scavenge, build, and fight off hordes every 7 days.', 
-                rating: '8.9', 
-                downloads: '4.5M', 
-                image: 'https://wallpapercave.com/wp/wp2082801.jpg', 
-                link: 'https://gtorr.net/index.php?newsid=2659', 
-                badge: '🎯 Top', 
-                category: 'survival'
-            },
-            // { 
-            //     id: 3, 
-            //     title: 'Drive Beyond Horizons', 
-            //     genre: 'Racing / Open World', 
-            //     desc: 'Experience limitless driving across diverse landscapes. Customize your car and dominate the roads.', 
-            //     rating: '9.1', 
-            //     downloads: '1.8M', 
-            //     image: 'https://images.unsplash.com/photo-1494905998402-395d579af36f?w=600&h=350&fit=crop', 
-            //     link: 'https://gtorr.net/index.php?newsid=4958', 
-            //     badge: '⭐ Featured', 
-            //     category: 'cars'
-            // },
-            { 
-                id: 4, 
-                title: 'VEIN', 
-                genre: 'Horror / Survival', 
-                desc: 'High-speed underground racing with a retro vibe. Drift through neon-lit streets and climb the leaderboard.', 
-                rating: '8.7', 
-                downloads: '920K', 
-                image: 'data:image/webp;base64,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', 
-                link: 'https://gtorr.net/index.php?newsid=5077', 
-                badge: '🏎️ New', 
-                category: 'survival'
-            },
-            { 
-                id: 5, 
-                title: 'Fears to Fathom - Scratch Creek', 
-                genre: 'Horror', 
-                desc: 'Survive Agains Stalkers.', 
-                rating: '8.7', 
-                downloads: '920K', 
-                image: 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4121170/7d90288608eecd7842434f7a46b02c5e34e1b896/ss_7d90288608eecd7842434f7a46b02c5e34e1b896.1920x1080.jpg?t=1781141362', 
-                link: 'https://gtorr.net/index.php?newsid=5257', 
-                badge: '🏎️ New', 
-                category: 'horror'
-            },
-            { 
-                id: 5, 
                 title: 'Backrooms: Escape Together', 
                 genre: 'Horror', 
                 desc: 'Survive In Inifinite Levels Of Backroom.', 
@@ -903,54 +873,11 @@
                 category: 'horror'
             },
 
-             { 
-                id: 6, 
-                title: 'MIMESIS', 
-                genre: 'Horror', 
-                desc: 'Trust no one. Every voice sounds familiar until its too late. Can you tell whos really on your side?', 
-                rating: '8.2', 
-                downloads: '750K', 
-                image: 'https://gtorr.net/uploads/posts/2026-02/1771781461_library_capsule_2x.jpg', 
-                link: 'https://gtorr.net/index.php?newsid=5151', 
-                badge: '🏎️ New', 
-                category: 'horror'
-            },
-             { 
-                id: 7, 
-                title: 'Content Warning', 
-                genre: 'Horror', 
-                desc: 'Lights. Camera. Panic. Enter the darkness, capture terrifying monsters, and survive long enough to become internet famous... if your team doesnt leave you behind.', 
-                rating: '7.8', 
-                downloads: '780K', 
-                image: 'https://gtorr.net/uploads/posts/2024-04/1712944477_f8aba25c0d98aec777331af10b69a36e.jpg', 
-                link: 'https://gtorr.net/index.php?newsid=4546', 
-                badge: '🏎️ New', 
-                category: 'horror'
-            },
-             { 
-                id: 8, 
-                title: 'Lethal Company', 
-                genre: 'Horror', 
-                desc: 'Every mission starts with a plan. Every mission ends in chaos. Scavenge abandoned facilities, avoid deadly creatures, and make it back alive... if your crew doesnt panic first.', 
-                rating: '9.2', 
-                downloads: '3.8M', 
-                image: 'https://wallpapercave.com/wp/wp13313041.jpg', 
-                link: 'https://gtorr.net/index.php?newsid=4342', 
-                badge: '🏎️ New', 
-                category: 'horror'
-            },
-            { 
-                id: 9, 
-                title: 'R.E.P.O.', 
-                genre: 'Horror', 
-                desc: 'Work together, stay quiet, and escape with the loot before its too late.', 
-                rating: '7.1', 
-                downloads: '2.5M', 
-                image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSAnrbbuyxe0GFoUCPsxF1paduykU1aevUZ37HGCJqWhg&s=10', 
-                link: 'https://gtorr.net/index.php?newsid=4925', 
-                badge: '🏎️ New', 
-                category: 'horror'
-            }
+              
+
+            
+             
+          
 
 
         ];
