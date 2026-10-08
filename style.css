@@ -1,6 +1,5 @@
 /* ============ BASE / ROOT ============ */
 * { margin: 0; padding: 0; box-sizing: border-box; }
-
 html { scroll-behavior: smooth; font-size: 16px; }
 
 :root {
@@ -139,6 +138,16 @@ body[data-theme="void"] {
 }
 .main-wrapper { position: relative; z-index: 1; }
 
+/* Hidden YT player */
+#yt-player {
+    position: fixed;
+    bottom: 0; right: 0;
+    width: 200px; height: 113px;
+    opacity: 0.001;
+    pointer-events: none;
+    z-index: 0;
+}
+
 /* ============ NAVBAR ============ */
 .navbar {
     position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
@@ -209,6 +218,15 @@ body[data-theme="void"] {
     border-color: var(--gold);
     box-shadow: var(--glow);
 }
+#musicBtn.playing {
+    animation: musicPulse 1.5s ease-in-out infinite;
+    border-color: #1db954;
+    color: #1db954;
+}
+@keyframes musicPulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(29,185,84,0.4); }
+    50% { box-shadow: 0 0 25px rgba(29,185,84,0.8); }
+}
 
 .profile-nav-btn {
     display: flex; align-items: center; gap: 8px;
@@ -225,9 +243,7 @@ body[data-theme="void"] {
     box-shadow: var(--glow);
     transform: translateY(-2px);
 }
-.avatar-mini {
-    width: 34px; height: 34px;
-}
+.avatar-mini { width: 34px; height: 34px; }
 .avatar-mini img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
 
 .hamburger {
@@ -261,6 +277,7 @@ body[data-theme="void"] {
     transition: all 0.4s ease;
     animation: floatProfile 3s ease-in-out infinite;
     min-width: 150px;
+    position: relative;
 }
 .profile-card.is-admin {
     background: rgba(30,20,50,0.8);
@@ -290,6 +307,54 @@ body[data-theme="void"] {
     padding: 3px 10px; border-radius: 12px;
     font-size: 0.65rem;
     border: 1px solid var(--card-border);
+}
+
+/* 🎵 Now Playing badge */
+.profile-music {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, rgba(29,185,84,0.15), rgba(29,185,84,0.05));
+    border: 1px solid rgba(29,185,84,0.4);
+    color: #1db954;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    max-width: 200px;
+    animation: musicFadeIn 0.5s ease;
+    margin-top: 2px;
+}
+@keyframes musicFadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.profile-music .music-title {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 130px;
+}
+
+/* Equalizer bars */
+.music-eq {
+    display: inline-flex;
+    gap: 2px;
+    align-items: flex-end;
+    height: 12px;
+    flex-shrink: 0;
+}
+.music-eq i {
+    display: block;
+    width: 2px;
+    background: #1db954;
+    border-radius: 1px;
+    height: 4px;
+    animation: eqBar 0.8s ease-in-out infinite;
+}
+.music-eq i:nth-child(1) { animation-delay: 0s; }
+.music-eq i:nth-child(2) { animation-delay: 0.15s; }
+.music-eq i:nth-child(3) { animation-delay: 0.3s; }
+.music-eq i:nth-child(4) { animation-delay: 0.45s; }
+@keyframes eqBar {
+    0%, 100% { height: 3px; }
+    50% { height: 12px; }
 }
 
 .hero-content { max-width: 800px; animation: fadeInUp 1s ease-out; }
@@ -393,7 +458,7 @@ body[data-theme="void"] {
 .category-card:hover .cat-icon { transform: scale(1.2) rotate(-5deg); }
 .category-card h4 { font-weight: 700; font-size: 1rem; color: var(--text); text-transform: capitalize; }
 
-/* ============ SEARCH & SURPRISE ============ */
+/* ============ SEARCH ============ */
 .search-wrap { max-width: 500px; margin: 0 auto 30px; position: relative; }
 .search-wrap input {
     width: 100%; padding: 14px 50px 14px 20px;
@@ -406,13 +471,97 @@ body[data-theme="void"] {
     position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
     color: var(--gold); font-size: 1.2rem; pointer-events: none;
 }
-.surprise-btn {
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    color: #fff; padding: 12px 26px; border-radius: 40px;
-    border: none; font-weight: 700; cursor: pointer;
-    transition: all 0.35s; box-shadow: 0 4px 20px var(--card-border);
+
+/* ============ ADMIN PICK ============ */
+.admin-pick-section {
+    max-width: 1100px;
+    margin: 0 auto 40px;
+    padding: 0 30px;
+    animation: pickAppear 0.6s ease-out;
 }
-.surprise-btn:hover { transform: translateY(-3px) rotate(-2deg); box-shadow: 0 8px 30px var(--card-border); }
+@keyframes pickAppear {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.admin-pick-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,140,0,0.06), rgba(255,215,0,0.08));
+    border: 2px solid var(--gold);
+    border-radius: 24px;
+    overflow: hidden;
+    position: relative;
+    animation: adminPickGlow 3s ease-in-out infinite;
+}
+@keyframes adminPickGlow {
+    0%, 100% { box-shadow: 0 0 30px rgba(255,215,0,0.25); }
+    50% { box-shadow: 0 0 60px rgba(255,215,0,0.5); }
+}
+.admin-pick-card::before {
+    content: "👑 ADMIN'S PICK";
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: linear-gradient(135deg, #ffd700, #ff8c00);
+    color: #000;
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    z-index: 2;
+    animation: badgeShine 2.5s ease-in-out infinite;
+}
+@keyframes badgeShine {
+    0%, 100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.05); filter: brightness(1.3); }
+}
+.admin-pick-card img {
+    width: 100%;
+    height: 100%;
+    min-height: 320px;
+    object-fit: cover;
+}
+.admin-pick-info {
+    padding: 40px 35px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.admin-pick-info h3 {
+    font-size: 2rem;
+    color: var(--gold-light);
+    margin-bottom: 8px;
+    font-weight: 800;
+}
+.admin-pick-info .by {
+    color: var(--gold);
+    font-size: 0.85rem;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 600;
+}
+.admin-pick-info .pick-desc {
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 20px;
+}
+.admin-pick-info .pick-meta {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+}
+.admin-pick-info .pick-meta span {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+}
+.admin-pick-info .pick-meta .val {
+    color: var(--gold-light);
+    font-weight: 700;
+}
 
 /* ============ FEATURED ============ */
 .featured-section { max-width: 1100px; margin: 0 auto 40px; padding: 0 30px; }
@@ -683,7 +832,7 @@ body[data-theme="void"] {
 .auth-form { display: flex; flex-direction: column; gap: 16px; }
 .input-group { display: flex; flex-direction: column; gap: 6px; }
 .input-group label { font-size: 0.85rem; color: var(--text-dim); font-weight: 600; }
-.input-group input, .input-group textarea {
+.input-group input, .input-group textarea, .input-group select {
     background: rgba(0,0,0,0.4);
     border: 1px solid var(--card-border);
     color: var(--text); padding: 12px 16px;
@@ -691,7 +840,8 @@ body[data-theme="void"] {
     outline: none; transition: all 0.3s;
     font-family: inherit;
 }
-.input-group input:focus { border-color: var(--gold); box-shadow: var(--glow); }
+.input-group input:focus, .input-group select:focus { border-color: var(--gold); box-shadow: var(--glow); }
+.input-group select option { background: var(--bg2); color: var(--text); }
 .divider {
     text-align: center; position: relative;
     color: var(--text-dim); font-size: 0.8rem;
@@ -861,6 +1011,43 @@ body[data-theme="void"] {
 }
 .admin-action-btn:hover { background: #ff6b6b; color: #fff; }
 
+/* ============ MUSIC MODAL ============ */
+.music-modal-content { max-width: 520px; padding: 40px 35px 35px; }
+.music-current-box {
+    display: flex; align-items: center; gap: 18px;
+    background: linear-gradient(135deg, rgba(29,185,84,0.08), rgba(29,185,84,0.02));
+    border: 1px solid rgba(29,185,84,0.35);
+    border-radius: 16px;
+    padding: 18px 22px;
+}
+.music-disc {
+    font-size: 2.8rem;
+    animation: discSpin 3s linear infinite;
+    animation-play-state: paused;
+}
+.music-disc.spinning { animation-play-state: running; }
+@keyframes discSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.music-meta { flex: 1; min-width: 0; }
+.music-status {
+    font-size: 0.75rem;
+    color: #1db954;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.music-name {
+    font-size: 1rem;
+    color: var(--text);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* ============ THEME MODAL ============ */
 .theme-modal-content { max-width: 780px; padding: 40px 35px 35px; }
 .themes-grid {
@@ -900,8 +1087,6 @@ body[data-theme="void"] {
     z-index: 0;
     transition: all 0.3s ease;
 }
-
-/* Frames */
 .avatar-wrapper[data-frame="none"]::before { display: none; }
 .avatar-wrapper[data-frame="gold"]::before {
     border: 3px solid #d4a745;
@@ -1002,8 +1187,9 @@ body[data-theme="void"] {
     .games-grid, .coming-soon-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
     .categories-flex { gap: 14px; }
     .category-card { min-width: 120px; max-width: 160px; padding: 20px 14px; }
-    .featured-card { grid-template-columns: 1fr; }
-    .featured-info { padding: 25px; }
+    .featured-card, .admin-pick-card { grid-template-columns: 1fr; }
+    .featured-info, .admin-pick-info { padding: 25px; }
+    .admin-pick-card img { min-height: 220px; }
     .screenshots { grid-template-columns: repeat(2, 1fr); }
     .sysreq-grid { grid-template-columns: 1fr; }
     .frames-grid, .animations-grid { grid-template-columns: repeat(3, 1fr); }
@@ -1023,5 +1209,7 @@ body[data-theme="void"] {
     .frames-grid, .animations-grid { grid-template-columns: repeat(2, 1fr); }
     .profile-header-section { flex-direction: column; text-align: center; }
     .modal-content { padding: 30px 20px 20px; }
-    .auth-modal-content, .profile-modal-content { padding: 30px 20px 20px; }
+    .auth-modal-content, .profile-modal-content, .music-modal-content { padding: 30px 20px 20px; }
+    .admin-pick-card img { min-height: 180px; }
+    .profile-music .music-title { max-width: 100px; }
 }

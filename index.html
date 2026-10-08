@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎯%3C/text%3E%3C/svg%3E">
     <title>🎯 Mission: Play | Premium Gaming Hub</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body data-theme="royal-gold">
 
 <canvas id="particles-canvas"></canvas>
+
+<!-- ===== HIDDEN YOUTUBE PLAYER ===== -->
+<div id="yt-player"></div>
 
 <!-- ===== MOBILE MENU ===== -->
 <div class="mobile-overlay" id="mobileOverlay"></div>
@@ -34,6 +37,7 @@
             <li><a href="#community">Community</a></li>
         </ul>
         <div class="nav-actions">
+            <button class="theme-btn" id="musicBtn" title="Music">🎵</button>
             <button class="theme-btn" id="themeBtn" title="Change Theme">🎨</button>
             <button class="btn-nav" id="authBtn">👤 Sign In</button>
             <button class="profile-nav-btn" id="profileNavBtn" style="display:none;">
@@ -91,6 +95,9 @@
             <input type="text" id="gameSearch" placeholder="🔍 Search games...">
             <span class="search-icon">🔍</span>
         </div>
+
+        <!-- 👑 ADMIN'S PICK (replaces Surprise Me) -->
+        <div class="admin-pick-section" id="adminPickSection" style="display:none;"></div>
 
         <div class="featured-section" id="featuredSection"></div>
 
@@ -160,7 +167,6 @@
             </div>
         </div>
 
-        <!-- LOGIN FORM -->
         <form class="auth-form" id="loginForm">
             <div class="input-group">
                 <label>📧 Email</label>
@@ -179,7 +185,6 @@
             <p class="auth-error" id="loginError"></p>
         </form>
 
-        <!-- REGISTER FORM -->
         <form class="auth-form" id="registerForm" style="display:none;">
             <div class="input-group">
                 <label>📧 Email</label>
@@ -238,7 +243,6 @@
             <button class="profile-tab" data-ptab="admin" id="adminTab" style="display:none;">👑 Admin</button>
         </div>
 
-        <!-- EDIT TAB -->
         <div class="profile-tab-content" id="ptab-edit">
             <div class="input-group">
                 <label>🏷 Nickname</label>
@@ -259,7 +263,6 @@
             <p class="auth-error" id="profileSaveMsg"></p>
         </div>
 
-        <!-- FRAMES TAB -->
         <div class="profile-tab-content" id="ptab-frames" style="display:none;">
             <h4>🎨 Choose Frame</h4>
             <div class="frames-grid" id="framesGrid"></div>
@@ -268,16 +271,60 @@
             <button class="btn-primary full-width" style="margin-top:20px;" id="saveFrameBtn">💾 Save Frame</button>
         </div>
 
-        <!-- ADMIN TAB -->
         <div class="profile-tab-content" id="ptab-admin" style="display:none;">
             <h4>👑 Admin Panel</h4>
             <div class="admin-users" id="adminUsersList"></div>
             <button class="btn-secondary full-width" style="margin-top:15px;" id="resetAllSlotsBtn">🔄 Reset All Member Slots</button>
+
+            <h4 style="margin-top:22px;">⭐ Recommend a Game</h4>
+            <p class="dim small" style="margin-bottom:10px;">აირჩიე თამაში — საიტზე გამოჩნდება "Admin's Pick" ბანერად</p>
+            <div class="input-group">
+                <select id="recommendGameSelect">
+                    <!-- populated by JS -->
+                </select>
+            </div>
+            <button class="btn-primary full-width" id="setRecommendationBtn" style="margin-top:10px;">
+                👑 Set as Admin's Pick
+            </button>
+            <button class="btn-secondary full-width" id="clearRecommendationBtn" style="margin-top:8px;">
+                🗑 Clear Recommendation
+            </button>
         </div>
 
         <div class="profile-actions">
             <button class="btn-secondary full-width" id="logoutBtn">🚪 Logout</button>
         </div>
+    </div>
+</div>
+
+<!-- ===== MUSIC MODAL ===== -->
+<div class="modal-overlay" id="musicModal">
+    <div class="modal-content music-modal-content">
+        <button class="modal-close" onclick="closeMusicModal()">✕</button>
+        <div class="section-title">
+            <div class="label">🎵 Music</div>
+            <h2>Now Playing</h2>
+            <div class="line"></div>
+        </div>
+
+        <div class="music-current-box" id="musicCurrentBox">
+            <div class="music-disc">💿</div>
+            <div class="music-meta">
+                <div class="music-status" id="musicStatus">No track</div>
+                <div class="music-name" id="musicName">Paste a YouTube link below</div>
+            </div>
+        </div>
+
+        <div class="input-group" style="margin-top:20px;">
+            <label>🔗 YouTube Link</label>
+            <input type="text" id="ytLinkInput" placeholder="https://youtube.com/watch?v=... or https://youtu.be/...">
+        </div>
+        <button class="btn-primary full-width" id="playMusicBtn" style="margin-top:12px;">▶️ Play</button>
+        <button class="btn-secondary full-width" id="stopMusicBtn" style="margin-top:10px;">⏹ Stop</button>
+
+        <p class="dim small" style="text-align:center; margin-top:16px;">
+            🎧 სხვები ხედავენ რას უსმენ პროფილის ბარათზე
+        </p>
     </div>
 </div>
 

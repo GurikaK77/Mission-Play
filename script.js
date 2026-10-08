@@ -1,6 +1,6 @@
 /* ================================================================
    MISSION: PLAY — script.js
-   Firebase Auth + Realtime DB + Profile + Themes + Games
+   Firebase Auth + Realtime DB + Profile + Themes + Games + Music + Admin Pick
    ================================================================ */
 
 /* ============ FIREBASE SETUP ============ */
@@ -29,11 +29,18 @@ const MEMBERS = [
 let currentUser = null;
 let firebaseUser = null;
 let memberSlots = {};
-let memberUserData = {};   // { memberName: { avatar, frame, frameAnimation, nickname } }
+let memberUserData = {};
 let selectedMember = null;
 let currentFilter = null;
 let previewFrame = 'gold';
 let previewAnim = 'none';
+let recommendation = null;
+
+// Music state
+let ytPlayer = null;
+let ytPlayerReady = false;
+let ytApiLoading = false;
+let currentMusic = null; // { videoId, title }
 
 /* ============ GAMES DATA ============ */
 const gamesData = [
@@ -122,7 +129,7 @@ function renderThemes() {
 function openThemeModal() { $('themeModal').classList.add('active'); }
 function closeThemeModal() { $('themeModal').classList.remove('active'); }
 
-/* ============ MEMBER SLOTS (Realtime DB) ============ */
+/* ============ MEMBER SLOTS ============ */
 function listenMemberSlots() {
     db.ref('memberSlots').on('value', snap => {
         memberSlots = snap.val() || {};
@@ -134,7 +141,7 @@ function listenMemberSlots() {
     });
 }
 
-/* Listen to all users — to sync hero profiles (avatar/frame/anim) live */
+/* Listen to users — syncs hero profiles + music */
 function listenUsers() {
     db.ref('users').on('value', snap => {
         const users = snap.val() || {};
@@ -196,7 +203,7 @@ function checkRegistrationAvailability() {
     }
 }
 
-/* ============ HERO PROFILES (LIVE SYNC) ============ */
+/* ============ HERO PROFILES (LIVE SYNC + MUSIC) ============ */
 function renderHeroProfiles() {
     const container = $('heroProfiles');
     if (!container) return;
@@ -207,11 +214,20 @@ function renderHeroProfiles() {
         const isAdmin = m.name === 'OverRuled';
         const userData = memberUserData[m.name];
 
-        // თუ დარეგისტრირებულია — მისი მიმდინარე ავატარი/ჩარჩო/ანიმაცია, თუ არა — default
         const avatar = userData?.avatar || m.avatar;
         const frame = userData?.frame || (isAdmin ? 'royal' : 'gold');
         const anim = userData?.frameAnimation || (isAdmin ? 'glow' : 'none');
         const nickname = userData?.nickname || m.name;
+
+        // Music badge (only if playing)
+        const music = userData?.music;
+        const isPlaying = music?.playing === true && music?.title;
+        const musicBadge = isPlaying ? `
+            <div class="profile-music" title="${music.title}">
+                <span class="music-eq"><i></i><i></i><i></i><i></i></span>
+                <span class="music-title">${music.title}</span>
+            </div>
+        ` : '';
 
         return `
             <div class="profile-card ${isAdmin ? 'is-admin' : ''}">
@@ -222,9 +238,63 @@ function renderHeroProfiles() {
                 <span class="profile-role">${m.role}</span>
                 ${isAdmin ? '<span class="developer-badge">👑 Developer</span>' : ''}
                 ${isClaimed ? '<span class="claimed-badge">✓ Registered</span>' : '<span class="claimed-badge">Available</span>'}
+                ${musicBadge}
             </div>
         `;
     }).join('');
+}
+
+/* ============ ADMIN RECOMMENDATION ============ */
+function listenRecommendation() {
+    db.ref('recommendation').on('value', snap => {
+        recommendation = snap.val();
+        renderAdminPick();
+    });
+}
+
+function renderAdminPick() {
+    const container = $('adminPickSection');
+    if (!container) return;
+
+    if (!recommendation || !recommendation.gameId) {
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+
+    const g = gamesData.find(x => x.id === recommendation.gameId);
+    if (!g) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'block';
+    container.innerHTML = `
+        <div class="admin-pick-card">
+            <img src="${g.image}" alt="${g.title}" onerror="this.src='https://picsum.photos/seed/${g.id}/800/500'">
+            <div class="admin-pick-info">
+                <h3>${g.title}</h3>
+                <div class="by">👑 Recommended by ${recommendation.recommendedBy || 'Admin'}</div>
+                <p class="pick-desc">${g.desc}</p>
+                <div class="pick-meta">
+                    <span>⭐ <span class="val">${g.rating}</span></span>
+                    <span>📥 <span class="val">${g.downloads}</span></span>
+                    <span>🎮 <span class="val" style="text-transform:capitalize;">${g.genre}</span></span>
+                </div>
+                <div>
+                    <button class="btn-primary" onclick="openGameModal(${g.id})">🎮 View Game</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function populateRecommendSelect() {
+    const select = $('recommendGameSelect');
+    if (!select) return;
+    select.innerHTML = '<option value="">— აირჩიე თამაში —</option>' +
+        gamesData.map(g => `<option value="${g.id}">${g.title} (${g.genre})</option>`).join('');
+    if (recommendation?.gameId) select.value = recommendation.gameId;
 }
 
 /* ============ AUTH MODAL ============ */
@@ -265,7 +335,7 @@ function openProfileOrAuth() {
 async function claimMemberSlot(memberName, uid) {
     const ref = db.ref('memberSlots/' + memberName);
     const result = await ref.transaction(current => {
-        if (current) return; // abort — already taken
+        if (current) return;
         return uid;
     });
     return result.committed;
@@ -275,7 +345,6 @@ async function saveUserRecord(uid, data) {
     await db.ref('users/' + uid).set(data);
 }
 
-/* --- Email Register --- */
 $('registerForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const errEl = $('registerError');
@@ -328,7 +397,6 @@ $('registerForm')?.addEventListener('submit', async (e) => {
     }
 });
 
-/* --- Email Login --- */
 $('loginForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const errEl = $('loginError');
@@ -342,7 +410,7 @@ $('loginForm')?.addEventListener('submit', async (e) => {
     }
 });
 
-/* ============ GOOGLE AUTH — REDIRECT METHOD ============ */
+/* ============ GOOGLE AUTH — REDIRECT ============ */
 async function googleAuth(isRegister) {
     const errEl = isRegister ? $('registerError') : $('loginError');
     if (errEl) { errEl.textContent = ''; errEl.className = 'auth-error'; }
@@ -456,6 +524,16 @@ auth.onAuthStateChanged(async (user) => {
             currentUser = snap.val();
             if (currentUser.theme) applyTheme(currentUser.theme);
             updateAuthUI();
+            // Set up onDisconnect for music playing state
+            db.ref('users/' + user.uid + '/music/playing').onDisconnect().set(false);
+            // Restore last music track (without autoplay)
+            if (currentUser.music?.videoId) {
+                currentMusic = {
+                    videoId: currentUser.music.videoId,
+                    title: currentUser.music.title || '🎵 Track'
+                };
+                updateMusicUI();
+            }
         } else {
             await auth.signOut();
         }
@@ -500,6 +578,7 @@ function openProfileModal() {
     if (currentUser.role === 'admin') {
         adminTab.style.display = 'block';
         loadAdminUsers();
+        populateRecommendSelect();
     } else {
         adminTab.style.display = 'none';
     }
@@ -542,7 +621,6 @@ function updateProfileHeader() {
     $('profileAvatarImg').src = currentUser.avatar || defaultAvatar(currentUser.nickname);
 }
 
-/* --- Save Profile (nickname + avatar) --- */
 $('saveProfileBtn')?.addEventListener('click', async () => {
     if (!currentUser || !firebaseUser) return;
     const msg = $('profileSaveMsg');
@@ -579,7 +657,6 @@ $('saveProfileBtn')?.addEventListener('click', async () => {
     }
 });
 
-/* --- Use Discord Avatar button --- */
 $('useDiscordAvatarBtn')?.addEventListener('click', async () => {
     if (!currentUser || !firebaseUser) return;
     const memberInfo = MEMBERS.find(m => m.name === currentUser.memberName);
@@ -587,7 +664,6 @@ $('useDiscordAvatarBtn')?.addEventListener('click', async () => {
         toast('❌ Member info not found', 'error');
         return;
     }
-
     const msg = $('profileSaveMsg');
     msg.textContent = ''; msg.className = 'auth-error';
 
@@ -671,10 +747,14 @@ $('saveFrameBtn')?.addEventListener('click', async () => {
     }
 });
 
-/* --- Logout --- */
 $('logoutBtn')?.addEventListener('click', async () => {
+    if (firebaseUser) {
+        // Set playing to false before logout
+        await db.ref('users/' + firebaseUser.uid + '/music/playing').set(false).catch(() => {});
+    }
     await auth.signOut();
     closeProfileModal();
+    stopMusicSilent();
     toast('👋 Signed out');
 });
 
@@ -738,6 +818,194 @@ $('resetAllSlotsBtn')?.addEventListener('click', async () => {
         toast('❌ ' + err.message, 'error');
     }
 });
+
+/* --- Set Recommendation --- */
+$('setRecommendationBtn')?.addEventListener('click', async () => {
+    if (!currentUser || currentUser.role !== 'admin') return;
+    const select = $('recommendGameSelect');
+    const gameId = parseInt(select.value);
+    if (!gameId) { toast('⚠️ აირჩიე თამაში', 'error'); return; }
+    const g = gamesData.find(x => x.id === gameId);
+    if (!g) return;
+
+    try {
+        await db.ref('recommendation').set({
+            gameId: g.id,
+            gameTitle: g.title,
+            recommendedBy: currentUser.nickname || 'Admin',
+            timestamp: Date.now()
+        });
+        toast('👑 Recommendation set: ' + g.title, 'success');
+    } catch (err) {
+        toast('❌ ' + err.message, 'error');
+    }
+});
+
+$('clearRecommendationBtn')?.addEventListener('click', async () => {
+    if (!currentUser || currentUser.role !== 'admin') return;
+    if (!confirm('წაიშალოს Admin\'s Pick?')) return;
+    try {
+        await db.ref('recommendation').remove();
+        toast('🗑 Recommendation cleared', 'success');
+    } catch (err) {
+        toast('❌ ' + err.message, 'error');
+    }
+});
+
+/* ============ MUSIC PLAYER (YouTube) ============ */
+function loadYouTubeAPI() {
+    if (window.YT && window.YT.Player) {
+        initYTPlayer();
+        return;
+    }
+    if (ytApiLoading) return;
+    ytApiLoading = true;
+    window.onYouTubeIframeAPIReady = initYTPlayer;
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+}
+
+function initYTPlayer() {
+    ytPlayer = new YT.Player('yt-player', {
+        height: '113',
+        width: '200',
+        videoId: '',
+        playerVars: {
+            autoplay: 0,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            modestbranding: 1,
+            playsinline: 1,
+            rel: 0
+        },
+        events: {
+            onReady: () => { ytPlayerReady = true; },
+            onStateChange: (e) => {
+                if (e.data === YT.PlayerState.ENDED) {
+                    // Track ended — set playing false
+                    setMusicPlaying(false);
+                }
+            },
+            onError: (e) => {
+                console.error('YT Player error:', e.data);
+                toast('❌ ვიდეო ვერ დაიკვრა', 'error');
+            }
+        }
+    });
+}
+
+function extractYtId(url) {
+    if (!url) return null;
+    const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtube\.com\/watch\?.+&v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+        /^([a-zA-Z0-9_-]{11})$/
+    ];
+    for (const p of patterns) {
+        const m = url.trim().match(p);
+        if (m) return m[1];
+    }
+    return null;
+}
+
+async function fetchYtTitle(videoId) {
+    try {
+        const res = await fetch(`https://www.youtube.com/oembed?url=https%3A//www.youtube.com/watch%3Fv%3D${videoId}&format=json`);
+        if (!res.ok) throw new Error('fetch failed');
+        const data = await res.json();
+        return data.title || '🎵 Unknown Track';
+    } catch {
+        return '🎵 Track';
+    }
+}
+
+async function playMusicFromLink(url) {
+    if (!firebaseUser) { toast('⚠️ ჯერ შედი ანგარიშზე', 'error'); return; }
+    const videoId = extractYtId(url);
+    if (!videoId) { toast('❌ არასწორი YouTube ლინკი', 'error'); return; }
+
+    if (!ytPlayerReady) {
+        toast('⏳ მოთამაშე იტვირთება, სცადე ცოტა ხანში', 'error');
+        return;
+    }
+
+    try {
+        ytPlayer.loadVideoById(videoId);
+        const title = await fetchYtTitle(videoId);
+        currentMusic = { videoId, title };
+
+        // Save to Firebase
+        await db.ref('users/' + firebaseUser.uid + '/music').set({
+            videoId,
+            title,
+            playing: true,
+            updatedAt: Date.now()
+        });
+
+        updateMusicUI();
+        toast('🎵 Playing: ' + title, 'success');
+    } catch (err) {
+        toast('❌ ' + err.message, 'error');
+    }
+}
+
+async function stopMusic() {
+    if (ytPlayer && ytPlayerReady) {
+        try { ytPlayer.stopVideo(); } catch {}
+    }
+    await setMusicPlaying(false);
+    currentMusic = null;
+    updateMusicUI();
+    toast('⏹ Music stopped');
+}
+
+function stopMusicSilent() {
+    if (ytPlayer && ytPlayerReady) {
+        try { ytPlayer.stopVideo(); } catch {}
+    }
+    currentMusic = null;
+}
+
+async function setMusicPlaying(playing) {
+    if (!firebaseUser) return;
+    try {
+        if (currentMusic) {
+            await db.ref('users/' + firebaseUser.uid + '/music').update({
+                videoId: currentMusic.videoId,
+                title: currentMusic.title,
+                playing: playing,
+                updatedAt: Date.now()
+            });
+        } else if (!playing) {
+            await db.ref('users/' + firebaseUser.uid + '/music/playing').set(false);
+        }
+    } catch (err) {
+        console.error('setMusicPlaying error:', err);
+    }
+}
+
+function updateMusicUI() {
+    const btn = $('musicBtn');
+    const status = $('musicStatus');
+    const name = $('musicName');
+    const disc = document.querySelector('.music-disc');
+    const isPlaying = !!(currentMusic && ytPlayer && ytPlayerReady && ytPlayer.getPlayerState && ytPlayer.getPlayerState() === 1);
+
+    if (btn) btn.classList.toggle('playing', isPlaying);
+    if (status) status.textContent = currentMusic ? 'Now Playing' : 'No Track';
+    if (name) name.textContent = currentMusic?.title || 'Paste a YouTube link below';
+    if (disc) disc.classList.toggle('spinning', isPlaying);
+    if ($('ytLinkInput') && currentMusic?.videoId && !$('ytLinkInput').value) {
+        $('ytLinkInput').value = 'https://youtube.com/watch?v=' + currentMusic.videoId;
+    }
+}
+
+function openMusicModal() {
+    $('musicModal').classList.add('active');
+    updateMusicUI();
+}
+function closeMusicModal() { $('musicModal').classList.remove('active'); }
 
 /* ============ GAMES RENDERING ============ */
 const gamesGrid = $('gamesGrid');
@@ -949,6 +1217,7 @@ document.addEventListener('keydown', (e) => {
         closeAuthModal();
         closeProfileModal();
         closeThemeModal();
+        closeMusicModal();
     }
 });
 
@@ -1150,12 +1419,21 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
 
 /* ============ EVENT LISTENERS ============ */
 $('themeBtn')?.addEventListener('click', openThemeModal);
+$('musicBtn')?.addEventListener('click', openMusicModal);
 $('authBtn')?.addEventListener('click', () => openAuthModal('login'));
 $('profileNavBtn')?.addEventListener('click', openProfileModal);
+
+$('playMusicBtn')?.addEventListener('click', () => {
+    const url = $('ytLinkInput').value.trim();
+    if (!url) { toast('⚠️ ჩაწერე YouTube ლინკი', 'error'); return; }
+    playMusicFromLink(url);
+});
+$('stopMusicBtn')?.addEventListener('click', stopMusic);
 
 $('authModal')?.addEventListener('click', (e) => { if (e.target.id === 'authModal') closeAuthModal(); });
 $('profileModal')?.addEventListener('click', (e) => { if (e.target.id === 'profileModal') closeProfileModal(); });
 $('themeModal')?.addEventListener('click', (e) => { if (e.target.id === 'themeModal') closeThemeModal(); });
+$('musicModal')?.addEventListener('click', (e) => { if (e.target.id === 'musicModal') closeMusicModal(); });
 
 /* ============ INITIALIZATION ============ */
 (function init() {
@@ -1167,8 +1445,12 @@ $('themeModal')?.addEventListener('click', (e) => { if (e.target.id === 'themeMo
     renderRecentlyViewed();
     initLiveStats();
     listenMemberSlots();
-    listenUsers();          // 👈 NEW — live sync hero profiles
+    listenUsers();
+    listenRecommendation();
     updateAuthUI();
+
+    // Load YT API
+    loadYouTubeAPI();
 
     if (canvas) {
         resizeCanvas();
