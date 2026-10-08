@@ -1,5 +1,5 @@
 /* ================================================================
-   MISSION: PLAY — script.js
+   MISSION: PLAY — script.js (FINAL)
    ================================================================ */
 
 const firebaseConfig = {
@@ -38,7 +38,6 @@ let ytPlayer = null;
 let ytPlayerReady = false;
 let ytApiLoading = false;
 let currentMusic = null;
-let authProcessing = false;
 
 const gamesData = [
     { id: 1, title: 'DayZ', genre: 'Survival', desc: 'Fight to survive in a cannibal-infested forest. Build, craft, and defend yourself against terrifying mutants.', rating: '9.9', downloads: '2.1M', image: 'https://cdn.cloudflare.steamstatic.com/steam/apps/221100/header.jpg', link: 'https://dayzavr.ru/download.html', badge: '🔥 Hot', category: 'survival' },
@@ -88,7 +87,7 @@ function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-/* ============ AUTO-MIGRATE OverRuled → KEROSENE ============ */
+/* ============ MIGRATION ============ */
 async function silentMigrate() {
     try {
         const oldSlot = await db.ref('memberSlots/OverRuled').once('value');
@@ -103,10 +102,6 @@ async function silentMigrate() {
                 await db.ref('publicProfiles/KEROSENE').set(oldPP.val());
                 await db.ref('publicProfiles/OverRuled').remove();
             }
-            const recSnap = await db.ref('recommendation').once('value');
-            if (recSnap.exists() && recSnap.val().recommendedBy === 'OverRuled') {
-                await db.ref('recommendation/recommendedBy').set('KEROSENE');
-            }
         }
     } catch (e) { console.warn('Migration:', e.message); }
 }
@@ -114,20 +109,18 @@ async function silentMigrate() {
 /* ============ PUBLIC PROFILE SYNC ============ */
 async function syncPublicProfile(memberName, data) {
     if (!memberName) return;
-    try {
-        await db.ref('publicProfiles/' + memberName).update(data);
-    } catch (err) { console.warn('Public sync:', err.message); }
+    try { await db.ref('publicProfiles/' + memberName).update(data); }
+    catch (err) { console.warn('syncPublicProfile:', err.message); }
 }
 
 /* ============ NOW PLAYING ============ */
 function listenNowPlaying() {
-    // Source 1: nowPlaying (uid-based, real-time)
     db.ref('nowPlaying').on('value', snap => {
         const np = snap.val() || {};
         nowPlayingByMember = {};
         for (const uid in np) {
             const data = np[uid];
-            if (data && data.memberName) {
+            if (data && data.memberName && data.playing === true && data.title) {
                 nowPlayingByMember[data.memberName] = data;
             }
         }
@@ -145,11 +138,10 @@ async function setNowPlaying(data) {
             playing: data?.playing === true,
             updatedAt: Date.now()
         };
-        // Write BOTH places
-        await db.ref('nowPlaying/' + firebaseUser.uid).set(payload).catch(e => console.warn('nowPlaying write:', e.message));
-        await db.ref('publicProfiles/' + currentUser.memberName + '/music').set(payload).catch(e => console.warn('publicProfiles write:', e.message));
-        // Update local cache instantly
-        nowPlayingByMember[currentUser.memberName] = payload;
+        await db.ref('nowPlaying/' + firebaseUser.uid).set(payload).catch(e => console.warn(e.message));
+        await db.ref('publicProfiles/' + currentUser.memberName + '/music').set(payload).catch(e => console.warn(e.message));
+        if (payload.playing && payload.title) nowPlayingByMember[currentUser.memberName] = payload;
+        else delete nowPlayingByMember[currentUser.memberName];
         renderHeroProfiles();
     } catch (err) { console.warn('setNowPlaying:', err.message); }
 }
@@ -196,10 +188,6 @@ function listenPublicProfiles() {
         const pp = snap.val() || {};
         for (const name in pp) {
             memberUserData[name] = Object.assign({}, memberUserData[name] || {}, pp[name]);
-            // music fallback
-            if (pp[name]?.music && pp[name].music.title && !nowPlayingByMember[name]) {
-                nowPlayingByMember[name] = pp[name].music;
-            }
         }
         renderHeroProfiles();
     }, () => {});
@@ -211,9 +199,7 @@ function listenUsers() {
         const users = snap.val() || {};
         for (const uid in users) {
             const u = users[uid];
-            if (u && u.memberName) {
-                memberUserData[u.memberName] = Object.assign({}, memberUserData[u.memberName] || {}, u);
-            }
+            if (u && u.memberName) memberUserData[u.memberName] = Object.assign({}, memberUserData[u.memberName] || {}, u);
         }
         renderHeroProfiles();
     }, () => {});
@@ -331,7 +317,6 @@ function openAuthModal(tab = 'login') {
     switchAuthTab(tab);
 }
 function closeAuthModal() { $('authModal').classList.remove('active'); }
-
 function switchAuthTab(tab) {
     document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
     $('loginForm').style.display = tab === 'login' ? 'flex' : 'none';
@@ -404,43 +389,113 @@ $('loginForm')?.addEventListener('submit', async (e) => {
     } catch (err) { errEl.textContent = '❌ ' + (err.message || 'Login failed'); }
 });
 
-/* ============ GOOGLE AUTH ============ */
+/* ============ GOOGLE AUTH (POPUP) ============ */
 async function googleAuth(isRegister) {
     const errEl = isRegister ? $('registerError') : $('loginError');
     if (errEl) { errEl.textContent = ''; errEl.className = 'auth-error'; }
+
     if (isRegister) {
-        if (!selectedMember) { if (errEl) errEl.textContent = '⚠️ ჯერ აირჩიე ვინ ხარ'; toast('⚠️ აირჩიე წევრი', 'error'); return; }
-        if (memberSlots[selectedMember]) { if (errEl) errEl.textContent = '🔒 უკვე დაკავებულია'; return; }
-        localStorage.setItem('mp-pending-member', selectedMember);
-        localStorage.setItem('mp-pending-register', 'true');
-    } else {
-        localStorage.removeItem('mp-pending-member');
-        localStorage.removeItem('mp-pending-register');
+        if (!selectedMember) {
+            if (errEl) errEl.textContent = '⚠️ ჯერ აირჩიე ვინ ხარ';
+            toast('⚠️ ჯერ აირჩიე ვინ ხარ', 'error');
+            return;
+        }
+        if (memberSlots[selectedMember]) {
+            if (errEl) errEl.textContent = '🔒 ეს წევრი უკვე დაკავებულია';
+            toast('🔒 ეს წევრი უკვე დაკავებულია', 'error');
+            return;
+        }
     }
+
+    let result = null;
     try {
-        await auth.signInWithRedirect(googleProvider);
+        console.log('🚀 Google popup starting...');
+        result = await auth.signInWithPopup(googleProvider);
+        console.log('✅ Popup success:', result.user.uid);
     } catch (err) {
-        if (errEl) errEl.textContent = '❌ ' + (err.message || 'Google auth failed');
-        toast('❌ ' + (err.message || 'Google auth failed'), 'error');
+        console.error('❌ Popup error:', err.code, err.message);
+        if (errEl) errEl.textContent = '❌ ' + (err.message || 'Google failed');
+        toast('❌ ' + (err.message || 'Google failed'), 'error');
+        return;
     }
+
+    await handleGoogleResult(result.user, isRegister, selectedMember);
 }
 $('googleLoginBtn')?.addEventListener('click', () => googleAuth(false));
 $('googleRegisterBtn')?.addEventListener('click', () => googleAuth(true));
 
-/* ============ UNIFIED AUTH PROCESSOR ============ */
-async function processAuth(user) {
-    if (!user) return;
-    if (authProcessing) return;
-    authProcessing = true;
+async function handleGoogleResult(user, isRegister, pendingMember) {
+    const errEl = isRegister ? $('registerError') : $('loginError');
+    const uid = user.uid;
+    const email = user.email;
 
     try {
-        // 1. Run migration (once)
-        await silentMigrate();
-
-        // 2. Check if user has record
-        let snap = await db.ref('users/' + user.uid).once('value');
+        const snap = await db.ref('users/' + uid).once('value');
         if (snap.exists()) {
-            // Existing user
+            console.log('✅ Existing user');
+            toast('✅ Welcome back!', 'success');
+            closeAuthModal();
+            return;
+        }
+
+        if (!isRegister || !pendingMember) {
+            console.log('⚠️ No register context, sign out');
+            await auth.signOut();
+            if (errEl) errEl.textContent = '⚠️ გამოიყენე Register ტაბი';
+            return;
+        }
+
+        if (memberSlots[pendingMember]) {
+            await auth.signOut();
+            if (errEl) errEl.textContent = '🔒 წევრი უკვე დაკავებულია';
+            toast('🔒 წევრი დაკავებულია', 'error');
+            return;
+        }
+
+        console.log('🎯 Claiming:', pendingMember);
+        const claimed = await claimMemberSlot(pendingMember, uid);
+        if (!claimed) {
+            await auth.signOut();
+            if (errEl) errEl.textContent = '🔒 Claim failed';
+            return;
+        }
+
+        const role = pendingMember === 'KEROSENE' ? 'admin' : 'member';
+        const memberInfo = MEMBERS.find(m => m.name === pendingMember);
+        const initialAvatar = user.photoURL || memberInfo.avatar;
+        const initialNick = user.displayName || pendingMember;
+
+        console.log('💾 Saving...');
+        await saveUserRecord(uid, {
+            email, memberName: pendingMember, nickname: initialNick,
+            avatar: initialAvatar, frame: role === 'admin' ? 'royal' : 'gold',
+            frameAnimation: role === 'admin' ? 'glow' : 'none',
+            theme: localStorage.getItem('mp-theme') || 'royal-gold', role, createdAt: Date.now()
+        });
+        await syncPublicProfile(pendingMember, {
+            nickname: initialNick, avatar: initialAvatar,
+            frame: role === 'admin' ? 'royal' : 'gold',
+            frameAnimation: role === 'admin' ? 'glow' : 'none', role
+        });
+
+        console.log('🎉 Registration complete!');
+        toast('🎉 Welcome, ' + pendingMember + '!', 'success');
+        closeAuthModal();
+    } catch (dbErr) {
+        console.error('❌ handle error:', dbErr);
+        await db.ref('memberSlots/' + pendingMember).remove().catch(() => {});
+        await auth.signOut().catch(() => {});
+        if (errEl) errEl.textContent = '❌ ' + dbErr.message;
+    }
+}
+
+/* ============ AUTH STATE ============ */
+auth.onAuthStateChanged(async (user) => {
+    firebaseUser = user;
+    if (user) {
+        await silentMigrate();
+        const snap = await db.ref('users/' + user.uid).once('value');
+        if (snap.exists()) {
             currentUser = snap.val();
             if (currentUser.theme) applyTheme(currentUser.theme);
             updateAuthUI();
@@ -452,80 +507,9 @@ async function processAuth(user) {
                 currentMusic = { videoId: currentUser.music.videoId, title: currentUser.music.title || '🎵 Track' };
             }
             updateMusicUI();
-            return;
+        } else {
+            console.log('⏳ User without record — waiting for handleGoogleResult');
         }
-
-        // 3. No record — check for pending registration
-        const isRegister = localStorage.getItem('mp-pending-register') === 'true';
-        const pendingMember = localStorage.getItem('mp-pending-member');
-
-        if (!isRegister || !pendingMember) {
-            // No pending registration → orphan user, sign out
-            console.log('No pending registration, signing out orphan user');
-            await auth.signOut();
-            return;
-        }
-
-        // 4. Complete pending registration
-        if (memberSlots[pendingMember]) {
-            await auth.signOut();
-            toast('🔒 წევრი უკვე დაკავებულია', 'error');
-            localStorage.removeItem('mp-pending-member');
-            localStorage.removeItem('mp-pending-register');
-            return;
-        }
-
-        const claimed = await claimMemberSlot(pendingMember, user.uid);
-        if (!claimed) {
-            await auth.signOut();
-            toast('🔒 წევრი უკვე დაკავებულია', 'error');
-            localStorage.removeItem('mp-pending-member');
-            localStorage.removeItem('mp-pending-register');
-            return;
-        }
-
-        const role = pendingMember === 'KEROSENE' ? 'admin' : 'member';
-        const memberInfo = MEMBERS.find(m => m.name === pendingMember);
-        const initialAvatar = user.photoURL || memberInfo.avatar;
-        const initialNick = user.displayName || pendingMember;
-
-        try {
-            await saveUserRecord(user.uid, {
-                email: user.email, memberName: pendingMember, nickname: initialNick,
-                avatar: initialAvatar, frame: role === 'admin' ? 'royal' : 'gold',
-                frameAnimation: role === 'admin' ? 'glow' : 'none',
-                theme: localStorage.getItem('mp-theme') || 'royal-gold', role, createdAt: Date.now()
-            });
-            await syncPublicProfile(pendingMember, {
-                nickname: initialNick, avatar: initialAvatar,
-                frame: role === 'admin' ? 'royal' : 'gold',
-                frameAnimation: role === 'admin' ? 'glow' : 'none', role
-            });
-            localStorage.removeItem('mp-pending-member');
-            localStorage.removeItem('mp-pending-register');
-            toast('🎉 Welcome, ' + pendingMember + '!', 'success');
-            closeAuthModal();
-        } catch (dbErr) {
-            await db.ref('memberSlots/' + pendingMember).remove().catch(() => {});
-            await auth.signOut().catch(() => {});
-            localStorage.removeItem('mp-pending-member');
-            localStorage.removeItem('mp-pending-register');
-            toast('❌ ' + dbErr.message, 'error');
-        }
-    } catch (err) {
-        console.error('processAuth error:', err);
-    } finally {
-        authProcessing = false;
-    }
-}
-
-/* onAuthStateChanged — primary entry point */
-auth.onAuthStateChanged(async (user) => {
-    firebaseUser = user;
-    if (user) {
-        // Small delay to let redirect result settle
-        await new Promise(r => setTimeout(r, 400));
-        await processAuth(user);
     } else {
         currentUser = null;
         playlist = {};
@@ -533,14 +517,6 @@ auth.onAuthStateChanged(async (user) => {
         updateAuthUI();
     }
 });
-
-/* getRedirectResult — secondary entry point (in case onAuthStateChanged didn't catch) */
-auth.getRedirectResult().then(async (result) => {
-    if (result?.user) {
-        firebaseUser = result.user;
-        await processAuth(result.user);
-    }
-}).catch(err => console.warn('Redirect result:', err.message));
 
 /* ============ UPDATE UI ============ */
 function updateAuthUI() {
@@ -687,8 +663,7 @@ $('logoutBtn')?.addEventListener('click', async () => {
         await db.ref('nowPlaying/' + firebaseUser.uid).remove().catch(() => {});
     }
     await auth.signOut();
-    closeProfileModal();
-    stopMusicSilent();
+    closeProfileModal(); stopMusicSilent();
     toast('👋 Signed out');
 });
 
@@ -722,7 +697,6 @@ async function loadAdminUsers() {
         }));
     } catch (err) { list.innerHTML = '<p class="auth-error">' + err.message + '</p>'; }
 }
-
 $('resetAllSlotsBtn')?.addEventListener('click', async () => {
     if (!confirm('Reset ALL slots?')) return;
     try {
@@ -730,7 +704,6 @@ $('resetAllSlotsBtn')?.addEventListener('click', async () => {
         toast('🔄 Slots reset', 'success'); loadAdminUsers();
     } catch (err) { toast('❌ ' + err.message, 'error'); }
 });
-
 $('setRecommendationBtn')?.addEventListener('click', async () => {
     if (!currentUser || currentUser.role !== 'admin') return;
     const gameId = parseInt($('recommendGameSelect').value);
