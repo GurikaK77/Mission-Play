@@ -19,7 +19,6 @@ const auth = firebase.auth();
 const db = firebase.database();
 const googleProvider = new firebase.auth.GoogleAuthProvider();
 
-const ADMIN_EMAIL = "gurikaqartvelishvili44@gmail.com";
 const MEMBERS = [
     { name: 'DarkTeddy', role: 'Gamer', avatar: 'https://cdn.discordapp.com/avatars/1063112261931110423/7a56ce3ede9ae5400c3b7f40989cf783.png?size=4096' },
     { name: 'OverRuled', role: 'Fullstack Dev', avatar: 'https://cdn.discordapp.com/avatars/1232394805213003817/548ebf47f06465022b97706775cbcfa9.png?size=4096', isAdmin: true },
@@ -209,7 +208,7 @@ function renderHeroProfiles() {
 
 /* ============ AUTH MODAL ============ */
 function openAuthModal(tab = 'login') {
-    if (firebaseUser) { openProfileModal(); return; }
+    if (firebaseUser && currentUser) { openProfileModal(); return; }
     $('authModal').classList.add('active');
     renderMemberOptions();
     checkRegistrationAvailability();
@@ -237,7 +236,7 @@ document.querySelectorAll('.auth-tab').forEach(tab => {
 });
 
 function openProfileOrAuth() {
-    if (firebaseUser) openProfileModal();
+    if (firebaseUser && currentUser) openProfileModal();
     else openAuthModal('login');
 }
 
@@ -280,7 +279,7 @@ $('registerForm')?.addEventListener('submit', async (e) => {
             return;
         }
 
-        // 👑 OverRuled = admin, დანარჩენები = member
+        // 👑 OverRuled = admin
         const role = selectedMember === 'OverRuled' ? 'admin' : 'member';
         const memberInfo = MEMBERS.find(m => m.name === selectedMember);
 
@@ -324,83 +323,120 @@ $('loginForm')?.addEventListener('submit', async (e) => {
     }
 });
 
-/* --- Google Sign In / Register --- */
+/* ============ GOOGLE AUTH — REDIRECT METHOD ============ */
+/* Google Auth — Redirect (COOP-safe, მუშაობს Netlify-ზე) */
 async function googleAuth(isRegister) {
     const errEl = isRegister ? $('registerError') : $('loginError');
     if (errEl) { errEl.textContent = ''; errEl.className = 'auth-error'; }
 
     if (isRegister) {
-        if (!selectedMember) { errEl.textContent = '⚠️ Please choose your identity first'; return; }
-        if (memberSlots[selectedMember]) { errEl.textContent = '🔒 Member already claimed'; return; }
+        if (!selectedMember) {
+            if (errEl) errEl.textContent = '⚠️ ჯერ აირჩიე ვინ ხარ';
+            toast('⚠️ ჯერ აირჩიე ვინ ხარ', 'error');
+            return;
+        }
+        if (memberSlots[selectedMember]) {
+            if (errEl) errEl.textContent = '🔒 ეს წევრი უკვე დაკავებულია';
+            toast('🔒 ეს წევრი უკვე დაკავებულია', 'error');
+            return;
+        }
+        // შევინახოთ არჩევანი redirect-ისთვის
+        localStorage.setItem('mp-pending-member', selectedMember);
+        localStorage.setItem('mp-pending-register', 'true');
+    } else {
+        localStorage.removeItem('mp-pending-member');
+        localStorage.removeItem('mp-pending-register');
     }
-
-    let result = null;
-    let slotClaimed = false;
 
     try {
-        result = await auth.signInWithPopup(googleProvider);
-        const uid = result.user.uid;
-        const email = result.user.email;
-
-        // Check if user already has a record
-        const snap = await db.ref('users/' + uid).once('value');
-        if (snap.exists()) {
-            toast('✅ Welcome back!', 'success');
-            closeAuthModal();
-            return;
-        }
-
-        // New user — need member
-        if (!isRegister || !selectedMember) {
-            await auth.signOut();
-            if (errEl) errEl.textContent = '⚠️ Use the Register tab to create an account';
-            return;
-        }
-
-        const claimed = await claimMemberSlot(selectedMember, uid);
-        if (!claimed) {
-            await auth.signOut();
-            if (errEl) errEl.textContent = '🔒 Member claimed by someone else';
-            return;
-        }
-        slotClaimed = true;
-
-        // 👑 OverRuled = admin
-        const role = selectedMember === 'OverRuled' ? 'admin' : 'member';
-        const memberInfo = MEMBERS.find(m => m.name === selectedMember);
-
-        try {
-            await saveUserRecord(uid, {
-                email,
-                memberName: selectedMember,
-                nickname: result.user.displayName || selectedMember,
-                avatar: result.user.photoURL || memberInfo.avatar,
-                frame: role === 'admin' ? 'royal' : 'gold',
-                frameAnimation: role === 'admin' ? 'glow' : 'none',
-                theme: localStorage.getItem('mp-theme') || 'royal-gold',
-                role,
-                createdAt: Date.now()
-            });
-        } catch (dbErr) {
-            // ROLLBACK
-            if (slotClaimed) await db.ref('memberSlots/' + selectedMember).remove().catch(() => {});
-            await auth.signOut().catch(() => {});
-            throw new Error('Database error: ' + dbErr.message);
-        }
-
-        toast('🎉 Welcome, ' + selectedMember + '!', 'success');
-        closeAuthModal();
+        await auth.signInWithRedirect(googleProvider);
+        // Redirect ავტომატურად დაბრუნდება — დამუშავება ხდება getRedirectResult-ში
     } catch (err) {
-        // Cleanup on any failure
-        if (slotClaimed && selectedMember) {
-            await db.ref('memberSlots/' + selectedMember).remove().catch(() => {});
-        }
-        if (result?.user && !currentUser) {
-            await auth.signOut().catch(() => {});
-        }
         if (errEl) errEl.textContent = '❌ ' + (err.message || 'Google auth failed');
+        toast('❌ ' + (err.message || 'Google auth failed'), 'error');
     }
 }
+
+/* Redirect-ის დაბრუნების დამუშავება */
+auth.getRedirectResult().then(async (result) => {
+    if (!result || !result.user) {
+        // არაფერი — ჩვეულებრივი გვერდის ჩატვირთვა
+        return;
+    }
+
+    const uid = result.user.uid;
+    const email = result.user.email;
+    const isRegister = localStorage.getItem('mp-pending-register') === 'true';
+    const pendingMember = localStorage.getItem('mp-pending-member');
+
+    // თუ უკვე არსებობს user record → ჩვეულებრივი login
+    const snap = await db.ref('users/' + uid).once('value');
+    if (snap.exists()) {
+        localStorage.removeItem('mp-pending-member');
+        localStorage.removeItem('mp-pending-register');
+        toast('✅ Welcome back!', 'success');
+        closeAuthModal();
+        return;
+    }
+
+    // ახალი user — საჭიროა member
+    if (!isRegister || !pendingMember) {
+        await auth.signOut();
+        toast('⚠️ გამოიყენე Register ტაბი', 'error');
+        localStorage.removeItem('mp-pending-member');
+        localStorage.removeItem('mp-pending-register');
+        return;
+    }
+
+    if (memberSlots[pendingMember]) {
+        await auth.signOut();
+        toast('🔒 წევრი უკვე დაკავებულია', 'error');
+        localStorage.removeItem('mp-pending-member');
+        localStorage.removeItem('mp-pending-register');
+        return;
+    }
+
+    // Claim slot
+    const claimed = await claimMemberSlot(pendingMember, uid);
+    if (!claimed) {
+        await auth.signOut();
+        toast('🔒 წევრი უკვე დაკავებულია', 'error');
+        localStorage.removeItem('mp-pending-member');
+        localStorage.removeItem('mp-pending-register');
+        return;
+    }
+
+    // 👑 OverRuled = admin
+    const role = pendingMember === 'OverRuled' ? 'admin' : 'member';
+    const memberInfo = MEMBERS.find(m => m.name === pendingMember);
+
+    try {
+        await saveUserRecord(uid, {
+            email,
+            memberName: pendingMember,
+            nickname: result.user.displayName || pendingMember,
+            avatar: result.user.photoURL || memberInfo.avatar,
+            frame: role === 'admin' ? 'royal' : 'gold',
+            frameAnimation: role === 'admin' ? 'glow' : 'none',
+            theme: localStorage.getItem('mp-theme') || 'royal-gold',
+            role,
+            createdAt: Date.now()
+        });
+        toast('🎉 Welcome, ' + pendingMember + '!', 'success');
+        closeAuthModal();
+    } catch (dbErr) {
+        // ROLLBACK
+        await db.ref('memberSlots/' + pendingMember).remove().catch(() => {});
+        await auth.signOut().catch(() => {});
+        toast('❌ ' + dbErr.message, 'error');
+    } finally {
+        localStorage.removeItem('mp-pending-member');
+        localStorage.removeItem('mp-pending-register');
+    }
+}).catch(err => {
+    console.error('Redirect result error:', err);
+});
+
 $('googleLoginBtn')?.addEventListener('click', () => googleAuth(false));
 $('googleRegisterBtn')?.addEventListener('click', () => googleAuth(true));
 
