@@ -1,9 +1,9 @@
 /* ================================================================
    MISSION: PLAY — script.js
-   Firebase Auth + Realtime DB + Profile + Themes + Games + Music + Admin Pick
+   Firebase Auth + Realtime DB + Profile + Themes + Games
+   + Music Playlist + Admin Pick
    ================================================================ */
 
-/* ============ FIREBASE SETUP ============ */
 const firebaseConfig = {
     apiKey: "AIzaSyBO86fXhg1EO4shpF699lQ-CWkiB6gZHao",
     authDomain: "mission-play.firebaseapp.com",
@@ -25,7 +25,6 @@ const MEMBERS = [
     { name: 'ArLovelyy', role: 'Gamer', avatar: 'https://cdn.discordapp.com/avatars/1518641453373460572/f6ee5cfbc901926edc0576960ec91a78.png?size=4096' }
 ];
 
-/* ============ STATE ============ */
 let currentUser = null;
 let firebaseUser = null;
 let memberSlots = {};
@@ -35,14 +34,14 @@ let currentFilter = null;
 let previewFrame = 'gold';
 let previewAnim = 'none';
 let recommendation = null;
+let playlist = {};
 
 // Music state
 let ytPlayer = null;
 let ytPlayerReady = false;
 let ytApiLoading = false;
-let currentMusic = null; // { videoId, title }
+let currentMusic = null;
 
-/* ============ GAMES DATA ============ */
 const gamesData = [
     { id: 1, title: 'DayZ', genre: 'Survival', desc: 'Fight to survive in a cannibal-infested forest. Build, craft, and defend yourself against terrifying mutants.', rating: '9.9', downloads: '2.1M', image: 'https://cdn.cloudflare.steamstatic.com/steam/apps/221100/header.jpg', link: 'https://dayzavr.ru/download.html', badge: '🔥 Hot', category: 'survival' },
     { id: 2, title: 'Funnel Runners', genre: 'Survival', desc: 'Trapped in a doomed city, you and up to 7 friends must scavenge parts, fix your van, and escape the brutal tornado.', rating: '7.6', downloads: '25.8k', image: 'https://steamrip.com/wp-content/uploads/2024/08/Funnel-Runners.jpg', link: 'https://steamrip.com/funnel-runners-free-download/', badge: 'Online Soon', category: 'survival' },
@@ -75,7 +74,6 @@ const themesData = [
 const framesData = ['none', 'gold', 'neon', 'fire', 'ice', 'rainbow', 'legendary', 'hacker', 'royal'];
 const animationsData = ['none', 'pulse', 'glow', 'rotate', 'pulseGlow', 'shake', 'spinPulse'];
 
-/* ============ UTILITIES ============ */
 function $(id) { return document.getElementById(id); }
 function toast(msg, type = '') {
     const t = $('toast');
@@ -88,8 +86,11 @@ function toast(msg, type = '') {
 function defaultAvatar(name) {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=222&color=f0d078&size=200&bold=true`;
 }
+function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
-/* ============ THEME MANAGEMENT ============ */
+/* ============ THEME ============ */
 function applyTheme(themeId) {
     document.body.setAttribute('data-theme', themeId);
     localStorage.setItem('mp-theme', themeId);
@@ -141,7 +142,6 @@ function listenMemberSlots() {
     });
 }
 
-/* Listen to users — syncs hero profiles + music */
 function listenUsers() {
     db.ref('users').on('value', snap => {
         const users = snap.val() || {};
@@ -203,7 +203,6 @@ function checkRegistrationAvailability() {
     }
 }
 
-/* ============ HERO PROFILES (LIVE SYNC + MUSIC) ============ */
 function renderHeroProfiles() {
     const container = $('heroProfiles');
     if (!container) return;
@@ -219,13 +218,12 @@ function renderHeroProfiles() {
         const anim = userData?.frameAnimation || (isAdmin ? 'glow' : 'none');
         const nickname = userData?.nickname || m.name;
 
-        // Music badge (only if playing)
         const music = userData?.music;
         const isPlaying = music?.playing === true && music?.title;
         const musicBadge = isPlaying ? `
-            <div class="profile-music" title="${music.title}">
+            <div class="profile-music" title="${escapeHtml(music.title)}">
                 <span class="music-eq"><i></i><i></i><i></i><i></i></span>
-                <span class="music-title">${music.title}</span>
+                <span class="music-title">${escapeHtml(music.title)}</span>
             </div>
         ` : '';
 
@@ -234,7 +232,7 @@ function renderHeroProfiles() {
                 <div class="avatar-wrapper" data-frame="${frame}" data-anim="${anim}">
                     <img src="${avatar}" alt="${m.name}" onerror="this.src='${defaultAvatar(m.name)}'">
                 </div>
-                <span class="profile-name">${nickname}</span>
+                <span class="profile-name">${escapeHtml(nickname)}</span>
                 <span class="profile-role">${m.role}</span>
                 ${isAdmin ? '<span class="developer-badge">👑 Developer</span>' : ''}
                 ${isClaimed ? '<span class="claimed-badge">✓ Registered</span>' : '<span class="claimed-badge">Available</span>'}
@@ -263,10 +261,7 @@ function renderAdminPick() {
     }
 
     const g = gamesData.find(x => x.id === recommendation.gameId);
-    if (!g) {
-        container.style.display = 'none';
-        return;
-    }
+    if (!g) { container.style.display = 'none'; return; }
 
     container.style.display = 'block';
     container.innerHTML = `
@@ -274,7 +269,7 @@ function renderAdminPick() {
             <img src="${g.image}" alt="${g.title}" onerror="this.src='https://picsum.photos/seed/${g.id}/800/500'">
             <div class="admin-pick-info">
                 <h3>${g.title}</h3>
-                <div class="by">👑 Recommended by ${recommendation.recommendedBy || 'Admin'}</div>
+                <div class="by">👑 Recommended by ${escapeHtml(recommendation.recommendedBy || 'Admin')}</div>
                 <p class="pick-desc">${g.desc}</p>
                 <div class="pick-meta">
                     <span>⭐ <span class="val">${g.rating}</span></span>
@@ -410,7 +405,6 @@ $('loginForm')?.addEventListener('submit', async (e) => {
     }
 });
 
-/* ============ GOOGLE AUTH — REDIRECT ============ */
 async function googleAuth(isRegister) {
     const errEl = isRegister ? $('registerError') : $('loginError');
     if (errEl) { errEl.textContent = ''; errEl.className = 'auth-error'; }
@@ -443,7 +437,6 @@ async function googleAuth(isRegister) {
 
 auth.getRedirectResult().then(async (result) => {
     if (!result || !result.user) return;
-
     const uid = result.user.uid;
     const email = result.user.email;
     const isRegister = localStorage.getItem('mp-pending-register') === 'true';
@@ -508,9 +501,7 @@ auth.getRedirectResult().then(async (result) => {
         localStorage.removeItem('mp-pending-member');
         localStorage.removeItem('mp-pending-register');
     }
-}).catch(err => {
-    console.error('Redirect result error:', err);
-});
+}).catch(err => console.error('Redirect result error:', err));
 
 $('googleLoginBtn')?.addEventListener('click', () => googleAuth(false));
 $('googleRegisterBtn')?.addEventListener('click', () => googleAuth(true));
@@ -524,21 +515,23 @@ auth.onAuthStateChanged(async (user) => {
             currentUser = snap.val();
             if (currentUser.theme) applyTheme(currentUser.theme);
             updateAuthUI();
-            // Set up onDisconnect for music playing state
             db.ref('users/' + user.uid + '/music/playing').onDisconnect().set(false);
-            // Restore last music track (without autoplay)
+            listenPlaylist();
+            // Restore current track
             if (currentUser.music?.videoId) {
                 currentMusic = {
                     videoId: currentUser.music.videoId,
                     title: currentUser.music.title || '🎵 Track'
                 };
-                updateMusicUI();
             }
+            updateMusicUI();
         } else {
             await auth.signOut();
         }
     } else {
         currentUser = null;
+        playlist = {};
+        renderPlaylist();
         updateAuthUI();
     }
 });
@@ -660,10 +653,7 @@ $('saveProfileBtn')?.addEventListener('click', async () => {
 $('useDiscordAvatarBtn')?.addEventListener('click', async () => {
     if (!currentUser || !firebaseUser) return;
     const memberInfo = MEMBERS.find(m => m.name === currentUser.memberName);
-    if (!memberInfo) {
-        toast('❌ Member info not found', 'error');
-        return;
-    }
+    if (!memberInfo) { toast('❌ Member info not found', 'error'); return; }
     const msg = $('profileSaveMsg');
     msg.textContent = ''; msg.className = 'auth-error';
 
@@ -691,7 +681,6 @@ function fileToBase64(file) {
     });
 }
 
-/* --- Frames & Animations --- */
 function renderFramesGrid() {
     const grid = $('framesGrid');
     if (!grid) return;
@@ -749,7 +738,6 @@ $('saveFrameBtn')?.addEventListener('click', async () => {
 
 $('logoutBtn')?.addEventListener('click', async () => {
     if (firebaseUser) {
-        // Set playing to false before logout
         await db.ref('users/' + firebaseUser.uid + '/music/playing').set(false).catch(() => {});
     }
     await auth.signOut();
@@ -766,10 +754,7 @@ async function loadAdminUsers() {
         const snap = await db.ref('users').once('value');
         const users = snap.val() || {};
         const entries = Object.entries(users);
-        if (!entries.length) {
-            list.innerHTML = '<p class="dim">No users yet.</p>';
-            return;
-        }
+        if (!entries.length) { list.innerHTML = '<p class="dim">No users yet.</p>'; return; }
         list.innerHTML = entries.map(([uid, u]) => `
             <div class="admin-user">
                 <div class="avatar-wrapper" data-frame="${u.frame || 'gold'}" data-anim="none">
@@ -787,7 +772,7 @@ async function loadAdminUsers() {
         `).join('');
         list.querySelectorAll('.admin-action-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
-                if (!confirm('Release this user\'s member slot? They will be logged out.')) return;
+                if (!confirm('Release this user\'s member slot?')) return;
                 const uid = btn.dataset.uid;
                 const memberName = btn.dataset.member;
                 try {
@@ -795,9 +780,7 @@ async function loadAdminUsers() {
                     await db.ref('users/' + uid).remove();
                     toast('🔄 Slot released', 'success');
                     loadAdminUsers();
-                } catch (err) {
-                    toast('❌ ' + err.message, 'error');
-                }
+                } catch (err) { toast('❌ ' + err.message, 'error'); }
             });
         });
     } catch (err) {
@@ -806,7 +789,7 @@ async function loadAdminUsers() {
 }
 
 $('resetAllSlotsBtn')?.addEventListener('click', async () => {
-    if (!confirm('⚠️ Reset ALL member slots? This will release DarkTeddy and ArLovelyy (OverRuled stays as admin).')) return;
+    if (!confirm('⚠️ Reset ALL member slots?')) return;
     try {
         for (const m of MEMBERS) {
             if (m.name === 'OverRuled') continue;
@@ -814,12 +797,9 @@ $('resetAllSlotsBtn')?.addEventListener('click', async () => {
         }
         toast('🔄 Slots reset', 'success');
         loadAdminUsers();
-    } catch (err) {
-        toast('❌ ' + err.message, 'error');
-    }
+    } catch (err) { toast('❌ ' + err.message, 'error'); }
 });
 
-/* --- Set Recommendation --- */
 $('setRecommendationBtn')?.addEventListener('click', async () => {
     if (!currentUser || currentUser.role !== 'admin') return;
     const select = $('recommendGameSelect');
@@ -827,7 +807,6 @@ $('setRecommendationBtn')?.addEventListener('click', async () => {
     if (!gameId) { toast('⚠️ აირჩიე თამაში', 'error'); return; }
     const g = gamesData.find(x => x.id === gameId);
     if (!g) return;
-
     try {
         await db.ref('recommendation').set({
             gameId: g.id,
@@ -836,9 +815,7 @@ $('setRecommendationBtn')?.addEventListener('click', async () => {
             timestamp: Date.now()
         });
         toast('👑 Recommendation set: ' + g.title, 'success');
-    } catch (err) {
-        toast('❌ ' + err.message, 'error');
-    }
+    } catch (err) { toast('❌ ' + err.message, 'error'); }
 });
 
 $('clearRecommendationBtn')?.addEventListener('click', async () => {
@@ -847,17 +824,12 @@ $('clearRecommendationBtn')?.addEventListener('click', async () => {
     try {
         await db.ref('recommendation').remove();
         toast('🗑 Recommendation cleared', 'success');
-    } catch (err) {
-        toast('❌ ' + err.message, 'error');
-    }
+    } catch (err) { toast('❌ ' + err.message, 'error'); }
 });
 
 /* ============ MUSIC PLAYER (YouTube) ============ */
 function loadYouTubeAPI() {
-    if (window.YT && window.YT.Player) {
-        initYTPlayer();
-        return;
-    }
+    if (window.YT && window.YT.Player) { initYTPlayer(); return; }
     if (ytApiLoading) return;
     ytApiLoading = true;
     window.onYouTubeIframeAPIReady = initYTPlayer;
@@ -868,30 +840,19 @@ function loadYouTubeAPI() {
 
 function initYTPlayer() {
     ytPlayer = new YT.Player('yt-player', {
-        height: '113',
-        width: '200',
-        videoId: '',
-        playerVars: {
-            autoplay: 0,
-            controls: 0,
-            disablekb: 1,
-            fs: 0,
-            modestbranding: 1,
-            playsinline: 1,
-            rel: 0
-        },
+        height: '113', width: '200', videoId: '',
+        playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, modestbranding: 1, playsinline: 1, rel: 0 },
         events: {
-            onReady: () => { ytPlayerReady = true; },
+            onReady: () => { ytPlayerReady = true; updateMusicUI(); },
             onStateChange: (e) => {
+                updateMusicUI();
                 if (e.data === YT.PlayerState.ENDED) {
-                    // Track ended — set playing false
                     setMusicPlaying(false);
+                    // Auto-play next in playlist
+                    playNextInPlaylist();
                 }
             },
-            onError: (e) => {
-                console.error('YT Player error:', e.data);
-                toast('❌ ვიდეო ვერ დაიკვრა', 'error');
-            }
+            onError: (e) => { console.error('YT error:', e.data); toast('❌ ვიდეო ვერ დაიკვრა', 'error'); }
         }
     });
 }
@@ -920,33 +881,147 @@ async function fetchYtTitle(videoId) {
     }
 }
 
-async function playMusicFromLink(url) {
-    if (!firebaseUser) { toast('⚠️ ჯერ შედი ანგარიშზე', 'error'); return; }
-    const videoId = extractYtId(url);
-    if (!videoId) { toast('❌ არასწორი YouTube ლინკი', 'error'); return; }
+/* ============ PLAYLIST ============ */
+function listenPlaylist() {
+    if (!firebaseUser) return;
+    db.ref('users/' + firebaseUser.uid + '/playlist').on('value', snap => {
+        playlist = snap.val() || {};
+        renderPlaylist();
+    });
+}
 
-    if (!ytPlayerReady) {
-        toast('⏳ მოთამაშე იტვირთება, სცადე ცოტა ხანში', 'error');
+function renderPlaylist() {
+    const list = $('playlistList');
+    const countEl = $('playlistCount');
+    if (!list) return;
+
+    const entries = Object.entries(playlist);
+    if (countEl) countEl.textContent = entries.length;
+
+    if (!entries.length) {
+        list.innerHTML = '<div class="playlist-empty">ჯერ არაფერია შენახული — დაამატე ლინკი ზემოთ ⬆️</div>';
         return;
     }
 
+    // Sort by addedAt desc (newest first)
+    entries.sort((a, b) => (b[1].addedAt || 0) - (a[1].addedAt || 0));
+
+    list.innerHTML = entries.map(([vid, data], idx) => {
+        const isActive = currentMusic?.videoId === vid;
+        return `
+            <div class="playlist-item ${isActive ? 'active' : ''}" data-vid="${vid}">
+                <span class="playlist-item-num">${isActive ? '▶' : (idx + 1)}</span>
+                <div class="playlist-item-info">
+                    <div class="playlist-item-title">${escapeHtml(data.title || 'Track')}</div>
+                    <div class="playlist-item-meta">${data.addedAt ? new Date(data.addedAt).toLocaleDateString() : ''}</div>
+                </div>
+                <div class="playlist-item-actions">
+                    <button class="playlist-btn play-btn" data-action="play" data-vid="${vid}" title="Play">▶</button>
+                    <button class="playlist-btn delete-btn" data-action="delete" data-vid="${vid}" title="Delete">🗑</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    list.querySelectorAll('.playlist-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const action = btn.dataset.action;
+            const vid = btn.dataset.vid;
+            if (action === 'play') playFromPlaylist(vid);
+            else if (action === 'delete') deleteFromPlaylist(vid);
+        });
+    });
+
+    list.querySelectorAll('.playlist-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            if (e.target.closest('.playlist-btn')) return;
+            playFromPlaylist(item.dataset.vid);
+        });
+    });
+}
+
+async function addToPlaylist() {
+    if (!firebaseUser) { toast('⚠️ ჯერ შედი ანგარიშზე', 'error'); return; }
+    const url = $('ytLinkInput').value.trim();
+    if (!url) { toast('⚠️ ჩაწერე YouTube ლინკი', 'error'); return; }
+
+    const videoId = extractYtId(url);
+    if (!videoId) { toast('❌ არასწორი YouTube ლინკი', 'error'); return; }
+
+    if (playlist[videoId]) {
+        toast('ℹ️ ეს სიმღერა უკვე არის playlist-ში', 'error');
+        // Still play it
+        playFromPlaylist(videoId);
+        return;
+    }
+
+    toast('⏳ ემატება...');
+    const title = await fetchYtTitle(videoId);
+
+    try {
+        await db.ref('users/' + firebaseUser.uid + '/playlist/' + videoId).set({
+            title,
+            addedAt: Date.now()
+        });
+        $('ytLinkInput').value = '';
+        toast('➕ დაემატა: ' + title, 'success');
+        // Auto-play added track
+        playFromPlaylist(videoId);
+    } catch (err) {
+        toast('❌ ' + err.message, 'error');
+    }
+}
+
+async function deleteFromPlaylist(videoId) {
+    if (!firebaseUser) return;
+    if (!confirm('წაიშალოს ეს სიმღერა playlist-იდან?')) return;
+    try {
+        await db.ref('users/' + firebaseUser.uid + '/playlist/' + videoId).remove();
+        toast('🗑 წაიშალა', 'success');
+        // If currently playing this track, stop
+        if (currentMusic?.videoId === videoId) {
+            stopMusic();
+        }
+    } catch (err) {
+        toast('❌ ' + err.message, 'error');
+    }
+}
+
+async function playFromPlaylist(videoId) {
+    if (!firebaseUser) return;
+    if (!ytPlayerReady) {
+        toast('⏳ მოთამაშე იტვირთება...', 'error');
+        return;
+    }
+    const data = playlist[videoId];
+    if (!data) { toast('❌ სიმღერა ვერ მოიძებნა', 'error'); return; }
+
     try {
         ytPlayer.loadVideoById(videoId);
-        const title = await fetchYtTitle(videoId);
-        currentMusic = { videoId, title };
-
-        // Save to Firebase
+        currentMusic = { videoId, title: data.title };
         await db.ref('users/' + firebaseUser.uid + '/music').set({
             videoId,
-            title,
+            title: data.title,
             playing: true,
             updatedAt: Date.now()
         });
-
         updateMusicUI();
-        toast('🎵 Playing: ' + title, 'success');
+        renderPlaylist();
+        toast('🎵 ' + data.title, 'success');
     } catch (err) {
         toast('❌ ' + err.message, 'error');
+    }
+}
+
+function playNextInPlaylist() {
+    const entries = Object.entries(playlist);
+    if (!entries.length) return;
+    entries.sort((a, b) => (a[1].addedAt || 0) - (b[1].addedAt || 0));
+    if (!currentMusic) { playFromPlaylist(entries[0][0]); return; }
+    const idx = entries.findIndex(([vid]) => vid === currentMusic.videoId);
+    if (idx >= 0 && idx < entries.length - 1) {
+        playFromPlaylist(entries[idx + 1][0]);
     }
 }
 
@@ -957,6 +1032,7 @@ async function stopMusic() {
     await setMusicPlaying(false);
     currentMusic = null;
     updateMusicUI();
+    renderPlaylist();
     toast('⏹ Music stopped');
 }
 
@@ -980,29 +1056,25 @@ async function setMusicPlaying(playing) {
         } else if (!playing) {
             await db.ref('users/' + firebaseUser.uid + '/music/playing').set(false);
         }
-    } catch (err) {
-        console.error('setMusicPlaying error:', err);
-    }
+    } catch (err) { console.error('setMusicPlaying error:', err); }
 }
 
 function updateMusicUI() {
     const btn = $('musicBtn');
     const status = $('musicStatus');
     const name = $('musicName');
-    const disc = document.querySelector('.music-disc');
+    const disc = $('musicDisc');
     const isPlaying = !!(currentMusic && ytPlayer && ytPlayerReady && ytPlayer.getPlayerState && ytPlayer.getPlayerState() === 1);
 
     if (btn) btn.classList.toggle('playing', isPlaying);
-    if (status) status.textContent = currentMusic ? 'Now Playing' : 'No Track';
-    if (name) name.textContent = currentMusic?.title || 'Paste a YouTube link below';
+    if (status) status.textContent = currentMusic ? (isPlaying ? 'Now Playing' : 'Paused / Ready') : 'No Track';
+    if (name) name.textContent = currentMusic?.title || 'აირჩიე სიმღერა ან ჩასვი ლინკი';
     if (disc) disc.classList.toggle('spinning', isPlaying);
-    if ($('ytLinkInput') && currentMusic?.videoId && !$('ytLinkInput').value) {
-        $('ytLinkInput').value = 'https://youtube.com/watch?v=' + currentMusic.videoId;
-    }
 }
 
 function openMusicModal() {
     $('musicModal').classList.add('active');
+    renderPlaylist();
     updateMusicUI();
 }
 function closeMusicModal() { $('musicModal').classList.remove('active'); }
@@ -1033,9 +1105,7 @@ function createGameCard(game) {
                     <span>⭐ <span class="rating">${game.rating}</span></span>
                     <span>📥 ${game.downloads}</span>
                 </div>
-                <a href="${game.link}" target="_blank" rel="noopener" class="btn-download">
-                    ⬇️ Download
-                </a>
+                <a href="${game.link}" target="_blank" rel="noopener" class="btn-download">⬇️ Download</a>
             </div>
         </div>
     `;
@@ -1118,13 +1188,8 @@ resetFilterBtn?.addEventListener('click', clearFilter);
 function openGameModal(id) {
     const g = gamesData.find(x => x.id === id);
     if (!g) return;
-
     const similar = gamesData.filter(x => x.category === g.category && x.id !== id).slice(0, 4);
-    const screenshots = [
-        g.image,
-        `https://picsum.photos/seed/${g.id}a/400/220`,
-        `https://picsum.photos/seed/${g.id}b/400/220`
-    ];
+    const screenshots = [g.image, `https://picsum.photos/seed/${g.id}a/400/220`, `https://picsum.photos/seed/${g.id}b/400/220`];
 
     const modal = $('gameModal');
     $('modalContent').innerHTML = `
@@ -1143,45 +1208,26 @@ function openGameModal(id) {
                 <div class="modal-stat"><span class="lbl">Category</span><span class="val" style="text-transform:capitalize;">${g.category}</span></div>
                 <div class="modal-stat"><span class="lbl">Badge</span><span class="val">${g.badge}</span></div>
             </div>
-
-            <div class="modal-section">
-                <h4>📖 About</h4>
-                <p>${g.desc} მოემზადე უნიკალური გამოცდილებისთვის — ხარისხი, ატმოსფერო და დაუვიწყარი მომენტები.</p>
-            </div>
-
+            <div class="modal-section"><h4>📖 About</h4><p>${g.desc}</p></div>
             <div class="modal-section">
                 <h4>📸 Screenshots</h4>
                 <div class="screenshots">
                     ${screenshots.map(s => `<img src="${s}" onclick="window.open('${s}')" onerror="this.style.display='none'">`).join('')}
                 </div>
             </div>
-
             <div class="modal-section">
                 <h4>💻 System Requirements</h4>
                 <div class="sysreq-grid">
                     <div class="sysreq-box">
                         <div class="title">Minimum</div>
-                        <ul>
-                            <li>OS: Windows 10 64-bit</li>
-                            <li>CPU: Intel i5 / AMD Ryzen 5</li>
-                            <li>RAM: 8 GB</li>
-                            <li>GPU: GTX 1050 / RX 560</li>
-                            <li>Storage: 30 GB</li>
-                        </ul>
+                        <ul><li>OS: Windows 10 64-bit</li><li>CPU: Intel i5 / Ryzen 5</li><li>RAM: 8 GB</li><li>GPU: GTX 1050 / RX 560</li><li>Storage: 30 GB</li></ul>
                     </div>
                     <div class="sysreq-box">
                         <div class="title">Recommended</div>
-                        <ul>
-                            <li>OS: Windows 11 64-bit</li>
-                            <li>CPU: Intel i7 / Ryzen 7</li>
-                            <li>RAM: 16 GB</li>
-                            <li>GPU: RTX 3060 / RX 6600</li>
-                            <li>Storage: 30 GB SSD</li>
-                        </ul>
+                        <ul><li>OS: Windows 11 64-bit</li><li>CPU: Intel i7 / Ryzen 7</li><li>RAM: 16 GB</li><li>GPU: RTX 3060 / RX 6600</li><li>Storage: 30 GB SSD</li></ul>
                     </div>
                 </div>
             </div>
-
             ${similar.length ? `
             <div class="modal-section">
                 <h4>🎯 Similar Games</h4>
@@ -1194,10 +1240,7 @@ function openGameModal(id) {
                     `).join('')}
                 </div>
             </div>` : ''}
-
-            <a href="${g.link}" target="_blank" rel="noopener" class="btn-download" style="font-size:1.1rem; padding:16px;">
-                ⬇️ Download Now
-            </a>
+            <a href="${g.link}" target="_blank" rel="noopener" class="btn-download" style="font-size:1.1rem; padding:16px;">⬇️ Download Now</a>
         </div>
     `;
     modal.classList.add('active');
@@ -1284,9 +1327,7 @@ function renderFeatured() {
                     &nbsp;•&nbsp;
                     <span style="color:var(--text-dim);">📥 ${g.downloads}</span>
                 </div>
-                <div>
-                    <button class="btn-primary" onclick="openGameModal(${g.id})">🎮 Details</button>
-                </div>
+                <div><button class="btn-primary" onclick="openGameModal(${g.id})">🎮 Details</button></div>
             </div>
         </div>
     `;
@@ -1423,10 +1464,9 @@ $('musicBtn')?.addEventListener('click', openMusicModal);
 $('authBtn')?.addEventListener('click', () => openAuthModal('login'));
 $('profileNavBtn')?.addEventListener('click', openProfileModal);
 
-$('playMusicBtn')?.addEventListener('click', () => {
-    const url = $('ytLinkInput').value.trim();
-    if (!url) { toast('⚠️ ჩაწერე YouTube ლინკი', 'error'); return; }
-    playMusicFromLink(url);
+$('addToPlaylistBtn')?.addEventListener('click', addToPlaylist);
+$('ytLinkInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); addToPlaylist(); }
 });
 $('stopMusicBtn')?.addEventListener('click', stopMusic);
 
@@ -1448,8 +1488,7 @@ $('musicModal')?.addEventListener('click', (e) => { if (e.target.id === 'musicMo
     listenUsers();
     listenRecommendation();
     updateAuthUI();
-
-    // Load YT API
+    renderPlaylist();
     loadYouTubeAPI();
 
     if (canvas) {

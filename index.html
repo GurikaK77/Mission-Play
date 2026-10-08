@@ -10,8 +10,6 @@
 <body data-theme="royal-gold">
 
 <canvas id="particles-canvas"></canvas>
-
-<!-- ===== HIDDEN YOUTUBE PLAYER ===== -->
 <div id="yt-player"></div>
 
 <!-- ===== MOBILE MENU ===== -->
@@ -25,7 +23,6 @@
 </div>
 
 <div class="main-wrapper">
-    <!-- ===== NAVBAR ===== -->
     <nav class="navbar" id="navbar">
         <a href="#home" class="nav-logo">
             <span class="logo-icon">🎯</span> Mission<span class="gold-text">Play</span>
@@ -52,7 +49,6 @@
         </div>
     </nav>
 
-    <!-- ===== HERO ===== -->
     <section class="hero" id="home">
         <div class="profiles-container" id="heroProfiles"></div>
         <div class="hero-content">
@@ -66,7 +62,6 @@
         </div>
     </section>
 
-    <!-- ===== CATEGORIES ===== -->
     <section class="categories-section" id="categories">
         <div class="section-title">
             <div class="label">📂 Genres</div>
@@ -79,7 +74,6 @@
         </div>
     </section>
 
-    <!-- ===== GAMES ===== -->
     <section class="games-section" id="games">
         <div class="section-title">
             <div class="label">🎯 Games</div>
@@ -96,7 +90,6 @@
             <span class="search-icon">🔍</span>
         </div>
 
-        <!-- 👑 ADMIN'S PICK (replaces Surprise Me) -->
         <div class="admin-pick-section" id="adminPickSection" style="display:none;"></div>
 
         <div class="featured-section" id="featuredSection"></div>
@@ -128,14 +121,12 @@
         </div>
     </section>
 
-    <!-- ===== COMMUNITY ===== -->
     <section class="community-section" id="community">
         <h2>💬 Join Our Community</h2>
         <p>შემოდი ჩვენს Discord-ზე — ნახე ახალი თამაშები პირველი, ითამაშე სხვებთან ერთად!</p>
         <a href="https://discord.gg/R2gGCzywn" target="_blank" class="discord-btn">💬 Join Discord</a>
     </section>
 
-    <!-- ===== FOOTER ===== -->
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-links">
@@ -194,13 +185,11 @@
                 <label>🔒 Password (min 6 chars)</label>
                 <input type="password" id="regPassword" required minlength="6" placeholder="••••••••">
             </div>
-
             <div class="member-picker">
                 <label>🎭 Choose Your Identity</label>
                 <p class="hint">Each member can only be claimed by one person</p>
                 <div class="member-options" id="memberOptions"></div>
             </div>
-
             <button type="submit" class="btn-primary full-width" id="registerBtn">Create Account</button>
             <div class="divider"><span>or</span></div>
             <button type="button" class="google-btn" id="googleRegisterBtn">
@@ -279,9 +268,7 @@
             <h4 style="margin-top:22px;">⭐ Recommend a Game</h4>
             <p class="dim small" style="margin-bottom:10px;">აირჩიე თამაში — საიტზე გამოჩნდება "Admin's Pick" ბანერად</p>
             <div class="input-group">
-                <select id="recommendGameSelect">
-                    <!-- populated by JS -->
-                </select>
+                <select id="recommendGameSelect"></select>
             </div>
             <button class="btn-primary full-width" id="setRecommendationBtn" style="margin-top:10px;">
                 👑 Set as Admin's Pick
@@ -297,32 +284,47 @@
     </div>
 </div>
 
-<!-- ===== MUSIC MODAL ===== -->
+<!-- ===== MUSIC MODAL (PLAYLIST) ===== -->
 <div class="modal-overlay" id="musicModal">
     <div class="modal-content music-modal-content">
         <button class="modal-close" onclick="closeMusicModal()">✕</button>
         <div class="section-title">
             <div class="label">🎵 Music</div>
-            <h2>Now Playing</h2>
+            <h2>My Playlist</h2>
             <div class="line"></div>
         </div>
 
+        <!-- Now Playing -->
         <div class="music-current-box" id="musicCurrentBox">
-            <div class="music-disc">💿</div>
+            <div class="music-disc" id="musicDisc">💿</div>
             <div class="music-meta">
                 <div class="music-status" id="musicStatus">No track</div>
-                <div class="music-name" id="musicName">Paste a YouTube link below</div>
+                <div class="music-name" id="musicName">აირჩიე სიმღერა ან ჩასვი ლინკი</div>
             </div>
         </div>
 
-        <div class="input-group" style="margin-top:20px;">
-            <label>🔗 YouTube Link</label>
-            <input type="text" id="ytLinkInput" placeholder="https://youtube.com/watch?v=... or https://youtu.be/...">
+        <!-- Add new song -->
+        <div class="music-add-box">
+            <div class="input-group" style="margin-bottom:10px;">
+                <label>🔗 Add YouTube Link to Playlist</label>
+                <input type="text" id="ytLinkInput" placeholder="https://youtube.com/watch?v=... or youtu.be/...">
+            </div>
+            <button class="btn-primary full-width" id="addToPlaylistBtn">➕ Add to Playlist</button>
         </div>
-        <button class="btn-primary full-width" id="playMusicBtn" style="margin-top:12px;">▶️ Play</button>
-        <button class="btn-secondary full-width" id="stopMusicBtn" style="margin-top:10px;">⏹ Stop</button>
 
-        <p class="dim small" style="text-align:center; margin-top:16px;">
+        <!-- Playlist -->
+        <div class="playlist-section">
+            <div class="playlist-header">
+                <h4>📋 Saved Songs (<span id="playlistCount">0</span>)</h4>
+            </div>
+            <div class="playlist-list" id="playlistList">
+                <div class="playlist-empty">ჯერ არაფერია შენახული</div>
+            </div>
+        </div>
+
+        <button class="btn-secondary full-width" id="stopMusicBtn" style="margin-top:16px;">⏹ Stop Music</button>
+
+        <p class="dim small" style="text-align:center; margin-top:14px;">
             🎧 სხვები ხედავენ რას უსმენ პროფილის ბარათზე
         </p>
     </div>
@@ -341,10 +343,8 @@
     </div>
 </div>
 
-<!-- ===== TOAST ===== -->
 <div class="toast" id="toast"></div>
 
-<!-- ===== FIREBASE ===== -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
