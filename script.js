@@ -27,10 +27,10 @@ const MEMBERS = [
 ];
 
 /* ============ STATE ============ */
-let currentUser = null;      // DB user record
-let firebaseUser = null;     // auth user
-let memberSlots = {};        // { DarkTeddy: 'uid'|null, ... }
-let selectedMember = null;   // during registration
+let currentUser = null;
+let firebaseUser = null;
+let memberSlots = {};
+let selectedMember = null;
 let currentFilter = null;
 let previewFrame = 'gold';
 let previewAnim = 'none';
@@ -86,11 +86,9 @@ function defaultAvatar(name) {
 function applyTheme(themeId) {
     document.body.setAttribute('data-theme', themeId);
     localStorage.setItem('mp-theme', themeId);
-    // Save to DB if logged in
     if (firebaseUser) {
         db.ref('users/' + firebaseUser.uid + '/theme').set(themeId).catch(() => {});
     }
-    // Update theme cards
     document.querySelectorAll('.theme-card').forEach(c => {
         c.classList.toggle('selected', c.dataset.theme === themeId);
     });
@@ -128,13 +126,6 @@ function closeThemeModal() { $('themeModal').classList.remove('active'); }
 function listenMemberSlots() {
     db.ref('memberSlots').on('value', snap => {
         memberSlots = snap.val() || {};
-        // Init if missing
-        const missing = MEMBERS.filter(m => !(m.name in memberSlots));
-        if (missing.length && firebaseUser) {
-            const updates = {};
-            missing.forEach(m => updates[m.name] = null);
-            db.ref('memberSlots').update(updates).catch(() => {});
-        }
         renderHeroProfiles();
         if ($('authModal')?.classList.contains('active')) {
             renderMemberOptions();
@@ -176,14 +167,12 @@ function renderMemberOptions() {
 }
 
 function checkRegistrationAvailability() {
-    const tabs = document.querySelector('.auth-tabs');
     const registerForm = $('registerForm');
     const loginForm = $('loginForm');
     const noReg = $('noRegisterMsg');
     const tabRegister = $('tabRegister');
 
     if (allMembersTaken()) {
-        // Hide register
         if (tabRegister) tabRegister.style.display = 'none';
         switchAuthTab('login');
         if (noReg) noReg.style.display = 'block';
@@ -204,7 +193,6 @@ function renderHeroProfiles() {
         const uid = memberSlots[m.name];
         const isClaimed = !!uid;
         const isAdmin = m.name === 'OverRuled';
-        // Use registered user data if available
         return `
             <div class="profile-card ${isAdmin ? 'is-admin' : ''}">
                 <div class="avatar-wrapper" data-frame="${isAdmin ? 'royal' : 'gold'}" data-anim="${isAdmin ? 'glow' : 'none'}">
@@ -257,7 +245,7 @@ function openProfileOrAuth() {
 async function claimMemberSlot(memberName, uid) {
     const ref = db.ref('memberSlots/' + memberName);
     const result = await ref.transaction(current => {
-        if (current) return; // abort
+        if (current) return; // abort — already taken
         return uid;
     });
     return result.committed;
@@ -279,13 +267,10 @@ $('registerForm')?.addEventListener('submit', async (e) => {
 
     if (!selectedMember) { errEl.textContent = '⚠️ Please choose your identity'; return; }
     if (memberSlots[selectedMember]) { errEl.textContent = '🔒 This member is already claimed'; return; }
-    if (selectedMember === 'OverRuled' && email !== ADMIN_EMAIL) {
-        errEl.textContent = '👑 OverRuled is reserved for the admin only';
-        return;
-    }
 
+    let cred = null;
     try {
-        const cred = await auth.createUserWithEmailAndPassword(email, password);
+        cred = await auth.createUserWithEmailAndPassword(email, password);
         const uid = cred.user.uid;
 
         const claimed = await claimMemberSlot(selectedMember, uid);
@@ -295,20 +280,28 @@ $('registerForm')?.addEventListener('submit', async (e) => {
             return;
         }
 
-        const role = (email === ADMIN_EMAIL && selectedMember === 'OverRuled') ? 'admin' : 'member';
+        // 👑 OverRuled = admin, დანარჩენები = member
+        const role = selectedMember === 'OverRuled' ? 'admin' : 'member';
         const memberInfo = MEMBERS.find(m => m.name === selectedMember);
 
-        await saveUserRecord(uid, {
-            email,
-            memberName: selectedMember,
-            nickname: selectedMember,
-            avatar: memberInfo.avatar,
-            frame: role === 'admin' ? 'royal' : 'gold',
-            frameAnimation: role === 'admin' ? 'glow' : 'none',
-            theme: localStorage.getItem('mp-theme') || 'royal-gold',
-            role,
-            createdAt: Date.now()
-        });
+        try {
+            await saveUserRecord(uid, {
+                email,
+                memberName: selectedMember,
+                nickname: selectedMember,
+                avatar: memberInfo.avatar,
+                frame: role === 'admin' ? 'royal' : 'gold',
+                frameAnimation: role === 'admin' ? 'glow' : 'none',
+                theme: localStorage.getItem('mp-theme') || 'royal-gold',
+                role,
+                createdAt: Date.now()
+            });
+        } catch (dbErr) {
+            // ROLLBACK
+            await db.ref('memberSlots/' + selectedMember).remove().catch(() => {});
+            await cred.user.delete().catch(() => {});
+            throw new Error('Database error: ' + dbErr.message);
+        }
 
         toast('🎉 Welcome, ' + selectedMember + '!', 'success');
         closeAuthModal();
@@ -334,22 +327,24 @@ $('loginForm')?.addEventListener('submit', async (e) => {
 /* --- Google Sign In / Register --- */
 async function googleAuth(isRegister) {
     const errEl = isRegister ? $('registerError') : $('loginError');
-    if (errEl) errEl.textContent = '';
+    if (errEl) { errEl.textContent = ''; errEl.className = 'auth-error'; }
 
     if (isRegister) {
         if (!selectedMember) { errEl.textContent = '⚠️ Please choose your identity first'; return; }
         if (memberSlots[selectedMember]) { errEl.textContent = '🔒 Member already claimed'; return; }
     }
 
+    let result = null;
+    let slotClaimed = false;
+
     try {
-        const result = await auth.signInWithPopup(googleProvider);
+        result = await auth.signInWithPopup(googleProvider);
         const uid = result.user.uid;
         const email = result.user.email;
 
         // Check if user already has a record
         const snap = await db.ref('users/' + uid).once('value');
         if (snap.exists()) {
-            // Existing user — just login
             toast('✅ Welcome back!', 'success');
             closeAuthModal();
             return;
@@ -358,40 +353,51 @@ async function googleAuth(isRegister) {
         // New user — need member
         if (!isRegister || !selectedMember) {
             await auth.signOut();
-            errEl && (errEl.textContent = '⚠️ Use the Register tab to create an account');
-            return;
-        }
-        if (selectedMember === 'OverRuled' && email !== ADMIN_EMAIL) {
-            await auth.signOut();
-            errEl && (errEl.textContent = '👑 OverRuled is reserved for the admin');
+            if (errEl) errEl.textContent = '⚠️ Use the Register tab to create an account';
             return;
         }
 
         const claimed = await claimMemberSlot(selectedMember, uid);
         if (!claimed) {
             await auth.signOut();
-            errEl && (errEl.textContent = '🔒 Member claimed by someone else');
+            if (errEl) errEl.textContent = '🔒 Member claimed by someone else';
             return;
         }
+        slotClaimed = true;
 
-        const role = (email === ADMIN_EMAIL && selectedMember === 'OverRuled') ? 'admin' : 'member';
+        // 👑 OverRuled = admin
+        const role = selectedMember === 'OverRuled' ? 'admin' : 'member';
         const memberInfo = MEMBERS.find(m => m.name === selectedMember);
 
-        await saveUserRecord(uid, {
-            email,
-            memberName: selectedMember,
-            nickname: result.user.displayName || selectedMember,
-            avatar: result.user.photoURL || memberInfo.avatar,
-            frame: role === 'admin' ? 'royal' : 'gold',
-            frameAnimation: role === 'admin' ? 'glow' : 'none',
-            theme: localStorage.getItem('mp-theme') || 'royal-gold',
-            role,
-            createdAt: Date.now()
-        });
+        try {
+            await saveUserRecord(uid, {
+                email,
+                memberName: selectedMember,
+                nickname: result.user.displayName || selectedMember,
+                avatar: result.user.photoURL || memberInfo.avatar,
+                frame: role === 'admin' ? 'royal' : 'gold',
+                frameAnimation: role === 'admin' ? 'glow' : 'none',
+                theme: localStorage.getItem('mp-theme') || 'royal-gold',
+                role,
+                createdAt: Date.now()
+            });
+        } catch (dbErr) {
+            // ROLLBACK
+            if (slotClaimed) await db.ref('memberSlots/' + selectedMember).remove().catch(() => {});
+            await auth.signOut().catch(() => {});
+            throw new Error('Database error: ' + dbErr.message);
+        }
 
         toast('🎉 Welcome, ' + selectedMember + '!', 'success');
         closeAuthModal();
     } catch (err) {
+        // Cleanup on any failure
+        if (slotClaimed && selectedMember) {
+            await db.ref('memberSlots/' + selectedMember).remove().catch(() => {});
+        }
+        if (result?.user && !currentUser) {
+            await auth.signOut().catch(() => {});
+        }
         if (errEl) errEl.textContent = '❌ ' + (err.message || 'Google auth failed');
     }
 }
@@ -405,11 +411,10 @@ auth.onAuthStateChanged(async (user) => {
         const snap = await db.ref('users/' + user.uid).once('value');
         if (snap.exists()) {
             currentUser = snap.val();
-            // Apply user theme
             if (currentUser.theme) applyTheme(currentUser.theme);
             updateAuthUI();
         } else {
-            // Auth user but no DB record (partial). Sign out.
+            // Auth user without DB record (partial). Sign out.
             await auth.signOut();
         }
     } else {
@@ -428,7 +433,6 @@ function updateAuthUI() {
         if (profileBtn) profileBtn.style.display = 'flex';
         if (mobileLink) mobileLink.textContent = '👤 ' + (currentUser.nickname || 'Profile');
 
-        // Nav avatar
         const navWrap = profileBtn.querySelector('.avatar-wrapper');
         const navImg = $('navAvatar');
         if (navWrap) { navWrap.dataset.frame = currentUser.frame || 'gold'; navWrap.dataset.anim = currentUser.frameAnimation || 'none'; }
@@ -450,7 +454,6 @@ function openProfileModal() {
     renderFramesGrid();
     renderAnimationsGrid();
     updateProfileHeader();
-    // Admin tab
     const adminTab = $('adminTab');
     if (currentUser.role === 'admin') {
         adminTab.style.display = 'block';
@@ -458,7 +461,6 @@ function openProfileModal() {
     } else {
         adminTab.style.display = 'none';
     }
-    // Switch to edit tab
     switchProfileTab('edit');
 }
 function closeProfileModal() { $('profileModal').classList.remove('active'); }
@@ -561,7 +563,6 @@ function renderFramesGrid() {
         opt.addEventListener('click', () => {
             previewFrame = opt.dataset.frame;
             grid.querySelectorAll('.frame-option').forEach(o => o.classList.toggle('selected', o.dataset.frame === previewFrame));
-            // Preview on main avatar
             const wrap = $('profileAvatarWrapper');
             wrap.dataset.frame = previewFrame;
         });
@@ -630,7 +631,7 @@ async function loadAdminUsers() {
                     <div class="email">${u.email || ''}</div>
                     <div class="meta">Member: ${u.memberName || '—'} • Role: ${u.role}</div>
                 </div>
-                ${u.email === ADMIN_EMAIL ? '' : `
+                ${u.role === 'admin' ? '' : `
                     <button class="admin-action-btn" data-uid="${uid}" data-member="${u.memberName}">Release Slot</button>
                 `}
             </div>
@@ -659,7 +660,7 @@ $('resetAllSlotsBtn')?.addEventListener('click', async () => {
     if (!confirm('⚠️ Reset ALL member slots? This will release DarkTeddy and ArLovelyy (OverRuled stays as admin).')) return;
     try {
         for (const m of MEMBERS) {
-            if (m.name === 'OverRuled') continue; // keep admin
+            if (m.name === 'OverRuled') continue;
             await db.ref('memberSlots/' + m.name).remove();
         }
         toast('🔄 Slots reset', 'success');
@@ -1089,7 +1090,6 @@ $('themeBtn')?.addEventListener('click', openThemeModal);
 $('authBtn')?.addEventListener('click', () => openAuthModal('login'));
 $('profileNavBtn')?.addEventListener('click', openProfileModal);
 
-// Close modals on overlay click
 $('authModal')?.addEventListener('click', (e) => { if (e.target.id === 'authModal') closeAuthModal(); });
 $('profileModal')?.addEventListener('click', (e) => { if (e.target.id === 'profileModal') closeProfileModal(); });
 $('themeModal')?.addEventListener('click', (e) => { if (e.target.id === 'themeModal') closeThemeModal(); });
@@ -1106,7 +1106,6 @@ $('themeModal')?.addEventListener('click', (e) => { if (e.target.id === 'themeMo
     listenMemberSlots();
     updateAuthUI();
 
-    // Particles
     if (canvas) {
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
