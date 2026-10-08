@@ -29,6 +29,7 @@ const MEMBERS = [
 let currentUser = null;
 let firebaseUser = null;
 let memberSlots = {};
+let memberUserData = {};   // { memberName: { avatar, frame, frameAnimation, nickname } }
 let selectedMember = null;
 let currentFilter = null;
 let previewFrame = 'gold';
@@ -133,6 +134,18 @@ function listenMemberSlots() {
     });
 }
 
+/* Listen to all users — to sync hero profiles (avatar/frame/anim) live */
+function listenUsers() {
+    db.ref('users').on('value', snap => {
+        const users = snap.val() || {};
+        memberUserData = {};
+        Object.values(users).forEach(u => {
+            if (u && u.memberName) memberUserData[u.memberName] = u;
+        });
+        renderHeroProfiles();
+    });
+}
+
 function allMembersTaken() {
     return MEMBERS.every(m => memberSlots[m.name]);
 }
@@ -183,7 +196,7 @@ function checkRegistrationAvailability() {
     }
 }
 
-/* ============ HERO PROFILES ============ */
+/* ============ HERO PROFILES (LIVE SYNC) ============ */
 function renderHeroProfiles() {
     const container = $('heroProfiles');
     if (!container) return;
@@ -192,12 +205,20 @@ function renderHeroProfiles() {
         const uid = memberSlots[m.name];
         const isClaimed = !!uid;
         const isAdmin = m.name === 'OverRuled';
+        const userData = memberUserData[m.name];
+
+        // თუ დარეგისტრირებულია — მისი მიმდინარე ავატარი/ჩარჩო/ანიმაცია, თუ არა — default
+        const avatar = userData?.avatar || m.avatar;
+        const frame = userData?.frame || (isAdmin ? 'royal' : 'gold');
+        const anim = userData?.frameAnimation || (isAdmin ? 'glow' : 'none');
+        const nickname = userData?.nickname || m.name;
+
         return `
             <div class="profile-card ${isAdmin ? 'is-admin' : ''}">
-                <div class="avatar-wrapper" data-frame="${isAdmin ? 'royal' : 'gold'}" data-anim="${isAdmin ? 'glow' : 'none'}">
-                    <img src="${m.avatar}" alt="${m.name}">
+                <div class="avatar-wrapper" data-frame="${frame}" data-anim="${anim}">
+                    <img src="${avatar}" alt="${m.name}" onerror="this.src='${defaultAvatar(m.name)}'">
                 </div>
-                <span class="profile-name">${m.name}</span>
+                <span class="profile-name">${nickname}</span>
                 <span class="profile-role">${m.role}</span>
                 ${isAdmin ? '<span class="developer-badge">👑 Developer</span>' : ''}
                 ${isClaimed ? '<span class="claimed-badge">✓ Registered</span>' : '<span class="claimed-badge">Available</span>'}
@@ -279,7 +300,6 @@ $('registerForm')?.addEventListener('submit', async (e) => {
             return;
         }
 
-        // 👑 OverRuled = admin
         const role = selectedMember === 'OverRuled' ? 'admin' : 'member';
         const memberInfo = MEMBERS.find(m => m.name === selectedMember);
 
@@ -296,7 +316,6 @@ $('registerForm')?.addEventListener('submit', async (e) => {
                 createdAt: Date.now()
             });
         } catch (dbErr) {
-            // ROLLBACK
             await db.ref('memberSlots/' + selectedMember).remove().catch(() => {});
             await cred.user.delete().catch(() => {});
             throw new Error('Database error: ' + dbErr.message);
@@ -324,7 +343,6 @@ $('loginForm')?.addEventListener('submit', async (e) => {
 });
 
 /* ============ GOOGLE AUTH — REDIRECT METHOD ============ */
-/* Google Auth — Redirect (COOP-safe, მუშაობს Netlify-ზე) */
 async function googleAuth(isRegister) {
     const errEl = isRegister ? $('registerError') : $('loginError');
     if (errEl) { errEl.textContent = ''; errEl.className = 'auth-error'; }
@@ -340,7 +358,6 @@ async function googleAuth(isRegister) {
             toast('🔒 ეს წევრი უკვე დაკავებულია', 'error');
             return;
         }
-        // შევინახოთ არჩევანი redirect-ისთვის
         localStorage.setItem('mp-pending-member', selectedMember);
         localStorage.setItem('mp-pending-register', 'true');
     } else {
@@ -350,26 +367,20 @@ async function googleAuth(isRegister) {
 
     try {
         await auth.signInWithRedirect(googleProvider);
-        // Redirect ავტომატურად დაბრუნდება — დამუშავება ხდება getRedirectResult-ში
     } catch (err) {
         if (errEl) errEl.textContent = '❌ ' + (err.message || 'Google auth failed');
         toast('❌ ' + (err.message || 'Google auth failed'), 'error');
     }
 }
 
-/* Redirect-ის დაბრუნების დამუშავება */
 auth.getRedirectResult().then(async (result) => {
-    if (!result || !result.user) {
-        // არაფერი — ჩვეულებრივი გვერდის ჩატვირთვა
-        return;
-    }
+    if (!result || !result.user) return;
 
     const uid = result.user.uid;
     const email = result.user.email;
     const isRegister = localStorage.getItem('mp-pending-register') === 'true';
     const pendingMember = localStorage.getItem('mp-pending-member');
 
-    // თუ უკვე არსებობს user record → ჩვეულებრივი login
     const snap = await db.ref('users/' + uid).once('value');
     if (snap.exists()) {
         localStorage.removeItem('mp-pending-member');
@@ -379,7 +390,6 @@ auth.getRedirectResult().then(async (result) => {
         return;
     }
 
-    // ახალი user — საჭიროა member
     if (!isRegister || !pendingMember) {
         await auth.signOut();
         toast('⚠️ გამოიყენე Register ტაბი', 'error');
@@ -396,7 +406,6 @@ auth.getRedirectResult().then(async (result) => {
         return;
     }
 
-    // Claim slot
     const claimed = await claimMemberSlot(pendingMember, uid);
     if (!claimed) {
         await auth.signOut();
@@ -406,7 +415,6 @@ auth.getRedirectResult().then(async (result) => {
         return;
     }
 
-    // 👑 OverRuled = admin
     const role = pendingMember === 'OverRuled' ? 'admin' : 'member';
     const memberInfo = MEMBERS.find(m => m.name === pendingMember);
 
@@ -425,7 +433,6 @@ auth.getRedirectResult().then(async (result) => {
         toast('🎉 Welcome, ' + pendingMember + '!', 'success');
         closeAuthModal();
     } catch (dbErr) {
-        // ROLLBACK
         await db.ref('memberSlots/' + pendingMember).remove().catch(() => {});
         await auth.signOut().catch(() => {});
         toast('❌ ' + dbErr.message, 'error');
@@ -450,7 +457,6 @@ auth.onAuthStateChanged(async (user) => {
             if (currentUser.theme) applyTheme(currentUser.theme);
             updateAuthUI();
         } else {
-            // Auth user without DB record (partial). Sign out.
             await auth.signOut();
         }
     } else {
@@ -568,6 +574,33 @@ $('saveProfileBtn')?.addEventListener('click', async () => {
         msg.textContent = '✅ Profile saved!';
         msg.className = 'auth-error success';
         toast('💾 Profile updated', 'success');
+    } catch (err) {
+        msg.textContent = '❌ ' + err.message;
+    }
+});
+
+/* --- Use Discord Avatar button --- */
+$('useDiscordAvatarBtn')?.addEventListener('click', async () => {
+    if (!currentUser || !firebaseUser) return;
+    const memberInfo = MEMBERS.find(m => m.name === currentUser.memberName);
+    if (!memberInfo) {
+        toast('❌ Member info not found', 'error');
+        return;
+    }
+
+    const msg = $('profileSaveMsg');
+    msg.textContent = ''; msg.className = 'auth-error';
+
+    try {
+        await db.ref('users/' + firebaseUser.uid).update({ avatar: memberInfo.avatar });
+        currentUser.avatar = memberInfo.avatar;
+        $('editAvatarUrl').value = memberInfo.avatar;
+        $('editAvatarFile').value = '';
+        updateProfileHeader();
+        updateAuthUI();
+        msg.textContent = '✅ Discord avatar applied!';
+        msg.className = 'auth-error success';
+        toast('💬 Discord avatar set!', 'success');
     } catch (err) {
         msg.textContent = '❌ ' + err.message;
     }
@@ -964,12 +997,6 @@ $('gameSearch')?.addEventListener('input', (e) => {
     gamesHeading.textContent = `Search: "${q}" (${filtered.length})`;
 });
 
-/* ============ SURPRISE ME ============ */
-function surpriseMe() {
-    const random = gamesData[Math.floor(Math.random() * gamesData.length)];
-    openGameModal(random.id);
-}
-
 /* ============ FEATURED ============ */
 function renderFeatured() {
     const dayIndex = new Date().getDate() % gamesData.length;
@@ -1140,6 +1167,7 @@ $('themeModal')?.addEventListener('click', (e) => { if (e.target.id === 'themeMo
     renderRecentlyViewed();
     initLiveStats();
     listenMemberSlots();
+    listenUsers();          // 👈 NEW — live sync hero profiles
     updateAuthUI();
 
     if (canvas) {

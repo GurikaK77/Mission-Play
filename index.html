@@ -91,9 +91,6 @@
             <input type="text" id="gameSearch" placeholder="🔍 Search games...">
             <span class="search-icon">🔍</span>
         </div>
-        <div style="text-align:center; margin-bottom:40px;">
-            <button class="surprise-btn" onclick="surpriseMe()">🎲 Surprise Me!</button>
-        </div>
 
         <div class="featured-section" id="featuredSection"></div>
 
@@ -255,6 +252,9 @@
                 <label>📁 Or Upload Image</label>
                 <input type="file" id="editAvatarFile" accept="image/*">
             </div>
+            <button class="btn-secondary full-width" id="useDiscordAvatarBtn" style="margin-top:-4px;">
+                💬 Use Discord Avatar
+            </button>
             <button class="btn-primary full-width" id="saveProfileBtn">💾 Save Changes</button>
             <p class="auth-error" id="profileSaveMsg"></p>
         </div>
