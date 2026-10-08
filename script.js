@@ -21,14 +21,14 @@ const googleProvider = new firebase.auth.GoogleAuthProvider();
 
 const MEMBERS = [
     { name: 'DarkTeddy', role: 'Gamer', avatar: 'https://cdn.discordapp.com/avatars/1063112261931110423/7a56ce3ede9ae5400c3b7f40989cf783.png?size=4096' },
-    { name: 'OverRuled', role: 'Fullstack Dev', avatar: 'https://cdn.discordapp.com/avatars/1232394805213003817/548ebf47f06465022b97706775cbcfa9.png?size=4096', isAdmin: true },
+    { name: 'KEROSENE', role: 'Fullstack Dev', avatar: 'https://cdn.discordapp.com/avatars/1232394805213003817/548ebf47f06465022b97706775cbcfa9.png?size=4096', isAdmin: true },
     { name: 'ArLovelyy', role: 'Gamer', avatar: 'https://cdn.discordapp.com/avatars/1518641453373460572/f6ee5cfbc901926edc0576960ec91a78.png?size=4096' }
 ];
 
 let currentUser = null;
 let firebaseUser = null;
 let memberSlots = {};
-let memberUserData = {};   // from publicProfiles
+let memberUserData = {};
 let selectedMember = null;
 let currentFilter = null;
 let previewFrame = 'gold';
@@ -36,7 +36,6 @@ let previewAnim = 'none';
 let recommendation = null;
 let playlist = {};
 
-// Music state
 let ytPlayer = null;
 let ytPlayerReady = false;
 let ytApiLoading = false;
@@ -88,6 +87,41 @@ function defaultAvatar(name) {
 }
 function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* ============ AUTO-MIGRATE: OverRuled → KEROSENE ============ */
+async function silentMigrate() {
+    try {
+        // memberSlots
+        const oldSlot = await db.ref('memberSlots/OverRuled').once('value');
+        if (oldSlot.exists()) {
+            await db.ref('memberSlots/KEROSENE').set(oldSlot.val());
+            await db.ref('memberSlots/OverRuled').remove();
+        }
+        // publicProfiles
+        const oldPP = await db.ref('publicProfiles/OverRuled').once('value');
+        if (oldPP.exists()) {
+            await db.ref('publicProfiles/KEROSENE').set(oldPP.val());
+            await db.ref('publicProfiles/OverRuled').remove();
+        }
+        // users memberName
+        const usersSnap = await db.ref('users').once('value');
+        const users = usersSnap.val() || {};
+        const updates = {};
+        for (const uid in users) {
+            if (users[uid].memberName === 'OverRuled') {
+                updates['users/' + uid + '/memberName'] = 'KEROSENE';
+            }
+        }
+        if (Object.keys(updates).length) await db.ref().update(updates);
+        // recommendation
+        const recSnap = await db.ref('recommendation').once('value');
+        if (recSnap.exists() && recSnap.val().recommendedBy === 'OverRuled') {
+            await db.ref('recommendation/recommendedBy').set('KEROSENE');
+        }
+    } catch (e) {
+        // silent
+    }
 }
 
 /* ============ PUBLIC PROFILE SYNC ============ */
@@ -152,12 +186,30 @@ function listenMemberSlots() {
     });
 }
 
-/* Listen to PUBLIC profiles — works for non-registered users too */
+/* Read PUBLIC profiles — works for everyone (logged in or not) */
 function listenPublicProfiles() {
     db.ref('publicProfiles').on('value', snap => {
-        memberUserData = snap.val() || {};
+        const pp = snap.val() || {};
+        for (const name in pp) {
+            memberUserData[name] = Object.assign({}, memberUserData[name] || {}, pp[name]);
+        }
         renderHeroProfiles();
-    });
+    }, () => {});
+}
+
+/* Read users — only works when authenticated. Overrides publicProfiles data for logged-in users */
+function listenUsers() {
+    if (!firebaseUser) return;
+    db.ref('users').on('value', snap => {
+        const users = snap.val() || {};
+        for (const uid in users) {
+            const u = users[uid];
+            if (u && u.memberName) {
+                memberUserData[u.memberName] = Object.assign({}, memberUserData[u.memberName] || {}, u);
+            }
+        }
+        renderHeroProfiles();
+    }, () => {});
 }
 
 function allMembersTaken() {
@@ -169,7 +221,7 @@ function renderMemberOptions() {
     if (!container) return;
     container.innerHTML = MEMBERS.map(m => {
         const taken = !!memberSlots[m.name];
-        const isAdminMember = m.name === 'OverRuled';
+        const isAdminMember = m.name === 'KEROSENE';
         return `
             <div class="member-option ${taken ? 'taken' : ''}" data-member="${m.name}">
                 <img src="${m.avatar}" alt="${m.name}">
@@ -210,7 +262,7 @@ function checkRegistrationAvailability() {
     }
 }
 
-/* ============ HERO PROFILES (reads from publicProfiles) ============ */
+/* ============ HERO PROFILES ============ */
 function renderHeroProfiles() {
     const container = $('heroProfiles');
     if (!container) return;
@@ -218,14 +270,15 @@ function renderHeroProfiles() {
     container.innerHTML = MEMBERS.map(m => {
         const uid = memberSlots[m.name];
         const isClaimed = !!uid;
-        const isAdmin = m.name === 'OverRuled';
-        const userData = memberUserData[m.name];   // from publicProfiles
+        const isAdmin = m.name === 'KEROSENE';
+        const userData = memberUserData[m.name];
 
         const avatar = userData?.avatar || m.avatar;
         const frame = userData?.frame || (isAdmin ? 'royal' : 'gold');
         const anim = userData?.frameAnimation || (isAdmin ? 'glow' : 'none');
         const nickname = userData?.nickname || m.name;
 
+        // Music badge — playing true + title present
         const music = userData?.music;
         const isPlaying = music?.playing === true && music?.title;
         const musicBadge = isPlaying ? `
@@ -284,9 +337,7 @@ function renderAdminPick() {
                     <span>📥 <span class="val">${g.downloads}</span></span>
                     <span>🎮 <span class="val" style="text-transform:capitalize;">${g.genre}</span></span>
                 </div>
-                <div>
-                    <button class="btn-primary" onclick="openGameModal(${g.id})">🎮 View Game</button>
-                </div>
+                <div><button class="btn-primary" onclick="openGameModal(${g.id})">🎮 View Game</button></div>
             </div>
         </div>
     `;
@@ -372,7 +423,7 @@ $('registerForm')?.addEventListener('submit', async (e) => {
             return;
         }
 
-        const role = selectedMember === 'OverRuled' ? 'admin' : 'member';
+        const role = selectedMember === 'KEROSENE' ? 'admin' : 'member';
         const memberInfo = MEMBERS.find(m => m.name === selectedMember);
 
         try {
@@ -387,7 +438,6 @@ $('registerForm')?.addEventListener('submit', async (e) => {
                 role,
                 createdAt: Date.now()
             });
-            // Sync public profile
             await syncPublicProfile(selectedMember, {
                 nickname: selectedMember,
                 avatar: memberInfo.avatar,
@@ -493,7 +543,7 @@ auth.getRedirectResult().then(async (result) => {
         return;
     }
 
-    const role = pendingMember === 'OverRuled' ? 'admin' : 'member';
+    const role = pendingMember === 'KEROSENE' ? 'admin' : 'member';
     const memberInfo = MEMBERS.find(m => m.name === pendingMember);
     const initialAvatar = result.user.photoURL || memberInfo.avatar;
     const initialNick = result.user.displayName || pendingMember;
@@ -537,21 +587,18 @@ $('googleRegisterBtn')?.addEventListener('click', () => googleAuth(true));
 auth.onAuthStateChanged(async (user) => {
     firebaseUser = user;
     if (user) {
+        // Run silent migration once per session
+        silentMigrate();
+
         const snap = await db.ref('users/' + user.uid).once('value');
         if (snap.exists()) {
             currentUser = snap.val();
             if (currentUser.theme) applyTheme(currentUser.theme);
             updateAuthUI();
             db.ref('users/' + user.uid + '/music/playing').onDisconnect().set(false);
-            // Also sync publicProfiles/playing on disconnect
             if (currentUser.memberName) {
                 db.ref('publicProfiles/' + currentUser.memberName + '/music/playing')
                     .onDisconnect().set(false);
-            }
-            listenPlaylist();
-
-            // Re-sync publicProfile on every login (in case of migration)
-            if (currentUser.memberName) {
                 syncPublicProfile(currentUser.memberName, {
                     nickname: currentUser.nickname,
                     avatar: currentUser.avatar,
@@ -560,7 +607,8 @@ auth.onAuthStateChanged(async (user) => {
                     role: currentUser.role
                 });
             }
-
+            listenPlaylist();
+            listenUsers();
             if (currentUser.music?.videoId) {
                 currentMusic = {
                     videoId: currentUser.music.videoId,
@@ -667,7 +715,6 @@ $('saveProfileBtn')?.addEventListener('click', async () => {
     const fileInput = $('editAvatarFile');
 
     let avatar = currentUser.avatar;
-
     if (fileInput.files && fileInput.files[0]) {
         const file = fileInput.files[0];
         if (file.size > 2 * 1024 * 1024) {
@@ -681,9 +728,7 @@ $('saveProfileBtn')?.addEventListener('click', async () => {
 
     try {
         await db.ref('users/' + firebaseUser.uid).update({ nickname, avatar });
-        // Sync public profile
         await syncPublicProfile(currentUser.memberName, { nickname, avatar });
-
         currentUser.nickname = nickname;
         currentUser.avatar = avatar;
         updateProfileHeader();
@@ -790,7 +835,7 @@ $('saveFrameBtn')?.addEventListener('click', async () => {
 $('logoutBtn')?.addEventListener('click', async () => {
     if (firebaseUser && currentUser) {
         await db.ref('users/' + firebaseUser.uid + '/music/playing').set(false).catch(() => {});
-        await syncPublicProfile(currentUser.memberName, { 'music/playing': false }).catch(() => {});
+        await syncPublicProfile(currentUser.memberName, { music: { playing: false } }).catch(() => {});
     }
     await auth.signOut();
     closeProfileModal();
@@ -845,7 +890,7 @@ $('resetAllSlotsBtn')?.addEventListener('click', async () => {
     if (!confirm('⚠️ Reset ALL member slots?')) return;
     try {
         for (const m of MEMBERS) {
-            if (m.name === 'OverRuled') continue;
+            if (m.name === 'KEROSENE') continue;
             await db.ref('memberSlots/' + m.name).remove();
         }
         toast('🔄 Slots reset', 'success');
@@ -904,7 +949,7 @@ function initYTPlayer() {
                     playNextInPlaylist();
                 }
             },
-            onError: (e) => { console.error('YT error:', e.data); toast('❌ ვიდეო ვერ დაიკვრა', 'error'); }
+            onError: (e) => { console.error('YT error:', e.data); }
         }
     });
 }
@@ -1037,16 +1082,28 @@ async function playFromPlaylist(videoId) {
     try {
         ytPlayer.loadVideoById(videoId);
         currentMusic = { videoId, title: data.title };
+
+        // Write to private
         await db.ref('users/' + firebaseUser.uid + '/music').set({
             videoId,
             title: data.title,
             playing: true,
             updatedAt: Date.now()
         });
-        // Sync public profile music
+
+        // Write to public (for everyone)
         await syncPublicProfile(currentUser.memberName, {
             music: { videoId, title: data.title, playing: true }
         });
+
+        // Update local memberUserData for instant render
+        if (currentUser.memberName) {
+            memberUserData[currentUser.memberName] = Object.assign({}, memberUserData[currentUser.memberName] || {}, {
+                music: { videoId, title: data.title, playing: true }
+            });
+            renderHeroProfiles();
+        }
+
         updateMusicUI();
         renderPlaylist();
         toast('🎵 ' + data.title, 'success');
@@ -1070,6 +1127,12 @@ async function stopMusic() {
     }
     await setMusicPlaying(false);
     currentMusic = null;
+    if (currentUser?.memberName) {
+        memberUserData[currentUser.memberName] = Object.assign({}, memberUserData[currentUser.memberName] || {}, {
+            music: { playing: false }
+        });
+        renderHeroProfiles();
+    }
     updateMusicUI();
     renderPlaylist();
     toast('⏹ Music stopped');
@@ -1101,7 +1164,7 @@ async function setMusicPlaying(playing) {
             });
         } else if (!playing) {
             await db.ref('users/' + firebaseUser.uid + '/music/playing').set(false);
-            await syncPublicProfile(currentUser.memberName, { 'music/playing': false });
+            await syncPublicProfile(currentUser.memberName, { music: { playing: false } });
         }
     } catch (err) { console.error('setMusicPlaying error:', err); }
 }
@@ -1181,6 +1244,11 @@ function createCategoryCard(cat) {
             <h4>${cat.name}</h4>
         </div>
     `;
+}
+
+function renderCategories() {
+    if (!categoriesGrid) return;
+    categoriesGrid.innerHTML = categoriesData.map(createCategoryCard).join('');
 }
 
 function renderGames(filter = null) {
@@ -1502,12 +1570,13 @@ $('musicModal')?.addEventListener('click', (e) => { if (e.target.id === 'musicMo
 (function init() {
     initTheme();
     renderThemes();
+    renderCategories();       // ← ✅ ახლა ჩანს categories
     renderGames();
     renderComingSoon();
     renderRecentlyViewed();
     initLiveStats();
     listenMemberSlots();
-    listenPublicProfiles();   // 👈 reads public data (no auth needed)
+    listenPublicProfiles();   // everyone sees public data
     listenRecommendation();
     updateAuthUI();
     renderPlaylist();
