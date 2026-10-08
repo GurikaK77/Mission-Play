@@ -12,7 +12,6 @@
 <canvas id="particles-canvas"></canvas>
 <div id="yt-player"></div>
 
-<!-- ===== MOBILE MENU ===== -->
 <div class="mobile-overlay" id="mobileOverlay"></div>
 <div class="mobile-menu" id="mobileMenu">
     <a href="#home" onclick="closeMenu()">🏠 Home</a>
@@ -90,9 +89,8 @@
             <span class="search-icon">🔍</span>
         </div>
 
+        <!-- 👑 ADMIN'S PICK (was Featured) -->
         <div class="admin-pick-section" id="adminPickSection" style="display:none;"></div>
-
-        <div class="featured-section" id="featuredSection"></div>
 
         <div class="live-stats">
             <div class="live-stat"><div class="num" id="statPlayers">0</div><div class="lbl">🟢 Online Now</div></div>
@@ -141,12 +139,10 @@
     </footer>
 </div>
 
-<!-- ===== GAME MODAL ===== -->
 <div class="modal-overlay" id="gameModal">
     <div class="modal-content" id="modalContent"></div>
 </div>
 
-<!-- ===== AUTH MODAL ===== -->
 <div class="modal-overlay" id="authModal">
     <div class="modal-content auth-modal-content">
         <button class="modal-close" onclick="closeAuthModal()">✕</button>
@@ -207,7 +203,6 @@
     </div>
 </div>
 
-<!-- ===== PROFILE MODAL ===== -->
 <div class="modal-overlay" id="profileModal">
     <div class="modal-content profile-modal-content">
         <button class="modal-close" onclick="closeProfileModal()">✕</button>
@@ -284,7 +279,6 @@
     </div>
 </div>
 
-<!-- ===== MUSIC MODAL (PLAYLIST) ===== -->
 <div class="modal-overlay" id="musicModal">
     <div class="modal-content music-modal-content">
         <button class="modal-close" onclick="closeMusicModal()">✕</button>
@@ -294,7 +288,6 @@
             <div class="line"></div>
         </div>
 
-        <!-- Now Playing -->
         <div class="music-current-box" id="musicCurrentBox">
             <div class="music-disc" id="musicDisc">💿</div>
             <div class="music-meta">
@@ -303,7 +296,6 @@
             </div>
         </div>
 
-        <!-- Add new song -->
         <div class="music-add-box">
             <div class="input-group" style="margin-bottom:10px;">
                 <label>🔗 Add YouTube Link to Playlist</label>
@@ -312,7 +304,6 @@
             <button class="btn-primary full-width" id="addToPlaylistBtn">➕ Add to Playlist</button>
         </div>
 
-        <!-- Playlist -->
         <div class="playlist-section">
             <div class="playlist-header">
                 <h4>📋 Saved Songs (<span id="playlistCount">0</span>)</h4>
@@ -330,7 +321,6 @@
     </div>
 </div>
 
-<!-- ===== THEME MODAL ===== -->
 <div class="modal-overlay" id="themeModal">
     <div class="modal-content theme-modal-content">
         <button class="modal-close" onclick="closeThemeModal()">✕</button>

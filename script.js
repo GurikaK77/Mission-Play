@@ -1,7 +1,7 @@
 /* ================================================================
    MISSION: PLAY — script.js
    Firebase Auth + Realtime DB + Profile + Themes + Games
-   + Music Playlist + Admin Pick
+   + Music Playlist + Admin Pick + Public Profiles
    ================================================================ */
 
 const firebaseConfig = {
@@ -28,7 +28,7 @@ const MEMBERS = [
 let currentUser = null;
 let firebaseUser = null;
 let memberSlots = {};
-let memberUserData = {};
+let memberUserData = {};   // from publicProfiles
 let selectedMember = null;
 let currentFilter = null;
 let previewFrame = 'gold';
@@ -90,6 +90,16 @@ function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+/* ============ PUBLIC PROFILE SYNC ============ */
+async function syncPublicProfile(memberName, data) {
+    if (!memberName) return;
+    try {
+        await db.ref('publicProfiles/' + memberName).update(data);
+    } catch (err) {
+        console.warn('Public profile sync failed:', err.message);
+    }
+}
+
 /* ============ THEME ============ */
 function applyTheme(themeId) {
     document.body.setAttribute('data-theme', themeId);
@@ -142,13 +152,10 @@ function listenMemberSlots() {
     });
 }
 
-function listenUsers() {
-    db.ref('users').on('value', snap => {
-        const users = snap.val() || {};
-        memberUserData = {};
-        Object.values(users).forEach(u => {
-            if (u && u.memberName) memberUserData[u.memberName] = u;
-        });
+/* Listen to PUBLIC profiles — works for non-registered users too */
+function listenPublicProfiles() {
+    db.ref('publicProfiles').on('value', snap => {
+        memberUserData = snap.val() || {};
         renderHeroProfiles();
     });
 }
@@ -203,6 +210,7 @@ function checkRegistrationAvailability() {
     }
 }
 
+/* ============ HERO PROFILES (reads from publicProfiles) ============ */
 function renderHeroProfiles() {
     const container = $('heroProfiles');
     if (!container) return;
@@ -211,7 +219,7 @@ function renderHeroProfiles() {
         const uid = memberSlots[m.name];
         const isClaimed = !!uid;
         const isAdmin = m.name === 'OverRuled';
-        const userData = memberUserData[m.name];
+        const userData = memberUserData[m.name];   // from publicProfiles
 
         const avatar = userData?.avatar || m.avatar;
         const frame = userData?.frame || (isAdmin ? 'royal' : 'gold');
@@ -379,6 +387,15 @@ $('registerForm')?.addEventListener('submit', async (e) => {
                 role,
                 createdAt: Date.now()
             });
+            // Sync public profile
+            await syncPublicProfile(selectedMember, {
+                nickname: selectedMember,
+                avatar: memberInfo.avatar,
+                frame: role === 'admin' ? 'royal' : 'gold',
+                frameAnimation: role === 'admin' ? 'glow' : 'none',
+                role,
+                music: { playing: false }
+            });
         } catch (dbErr) {
             await db.ref('memberSlots/' + selectedMember).remove().catch(() => {});
             await cred.user.delete().catch(() => {});
@@ -478,18 +495,28 @@ auth.getRedirectResult().then(async (result) => {
 
     const role = pendingMember === 'OverRuled' ? 'admin' : 'member';
     const memberInfo = MEMBERS.find(m => m.name === pendingMember);
+    const initialAvatar = result.user.photoURL || memberInfo.avatar;
+    const initialNick = result.user.displayName || pendingMember;
 
     try {
         await saveUserRecord(uid, {
             email,
             memberName: pendingMember,
-            nickname: result.user.displayName || pendingMember,
-            avatar: result.user.photoURL || memberInfo.avatar,
+            nickname: initialNick,
+            avatar: initialAvatar,
             frame: role === 'admin' ? 'royal' : 'gold',
             frameAnimation: role === 'admin' ? 'glow' : 'none',
             theme: localStorage.getItem('mp-theme') || 'royal-gold',
             role,
             createdAt: Date.now()
+        });
+        await syncPublicProfile(pendingMember, {
+            nickname: initialNick,
+            avatar: initialAvatar,
+            frame: role === 'admin' ? 'royal' : 'gold',
+            frameAnimation: role === 'admin' ? 'glow' : 'none',
+            role,
+            music: { playing: false }
         });
         toast('🎉 Welcome, ' + pendingMember + '!', 'success');
         closeAuthModal();
@@ -516,8 +543,24 @@ auth.onAuthStateChanged(async (user) => {
             if (currentUser.theme) applyTheme(currentUser.theme);
             updateAuthUI();
             db.ref('users/' + user.uid + '/music/playing').onDisconnect().set(false);
+            // Also sync publicProfiles/playing on disconnect
+            if (currentUser.memberName) {
+                db.ref('publicProfiles/' + currentUser.memberName + '/music/playing')
+                    .onDisconnect().set(false);
+            }
             listenPlaylist();
-            // Restore current track
+
+            // Re-sync publicProfile on every login (in case of migration)
+            if (currentUser.memberName) {
+                syncPublicProfile(currentUser.memberName, {
+                    nickname: currentUser.nickname,
+                    avatar: currentUser.avatar,
+                    frame: currentUser.frame,
+                    frameAnimation: currentUser.frameAnimation,
+                    role: currentUser.role
+                });
+            }
+
             if (currentUser.music?.videoId) {
                 currentMusic = {
                     videoId: currentUser.music.videoId,
@@ -638,6 +681,9 @@ $('saveProfileBtn')?.addEventListener('click', async () => {
 
     try {
         await db.ref('users/' + firebaseUser.uid).update({ nickname, avatar });
+        // Sync public profile
+        await syncPublicProfile(currentUser.memberName, { nickname, avatar });
+
         currentUser.nickname = nickname;
         currentUser.avatar = avatar;
         updateProfileHeader();
@@ -659,6 +705,7 @@ $('useDiscordAvatarBtn')?.addEventListener('click', async () => {
 
     try {
         await db.ref('users/' + firebaseUser.uid).update({ avatar: memberInfo.avatar });
+        await syncPublicProfile(currentUser.memberName, { avatar: memberInfo.avatar });
         currentUser.avatar = memberInfo.avatar;
         $('editAvatarUrl').value = memberInfo.avatar;
         $('editAvatarFile').value = '';
@@ -727,6 +774,10 @@ $('saveFrameBtn')?.addEventListener('click', async () => {
             frame: previewFrame,
             frameAnimation: previewAnim
         });
+        await syncPublicProfile(currentUser.memberName, {
+            frame: previewFrame,
+            frameAnimation: previewAnim
+        });
         currentUser.frame = previewFrame;
         currentUser.frameAnimation = previewAnim;
         updateAuthUI();
@@ -737,8 +788,9 @@ $('saveFrameBtn')?.addEventListener('click', async () => {
 });
 
 $('logoutBtn')?.addEventListener('click', async () => {
-    if (firebaseUser) {
+    if (firebaseUser && currentUser) {
         await db.ref('users/' + firebaseUser.uid + '/music/playing').set(false).catch(() => {});
+        await syncPublicProfile(currentUser.memberName, { 'music/playing': false }).catch(() => {});
     }
     await auth.signOut();
     closeProfileModal();
@@ -778,6 +830,7 @@ async function loadAdminUsers() {
                 try {
                     await db.ref('memberSlots/' + memberName).remove();
                     await db.ref('users/' + uid).remove();
+                    await db.ref('publicProfiles/' + memberName).remove().catch(() => {});
                     toast('🔄 Slot released', 'success');
                     loadAdminUsers();
                 } catch (err) { toast('❌ ' + err.message, 'error'); }
@@ -827,7 +880,7 @@ $('clearRecommendationBtn')?.addEventListener('click', async () => {
     } catch (err) { toast('❌ ' + err.message, 'error'); }
 });
 
-/* ============ MUSIC PLAYER (YouTube) ============ */
+/* ============ MUSIC PLAYER ============ */
 function loadYouTubeAPI() {
     if (window.YT && window.YT.Player) { initYTPlayer(); return; }
     if (ytApiLoading) return;
@@ -848,7 +901,6 @@ function initYTPlayer() {
                 updateMusicUI();
                 if (e.data === YT.PlayerState.ENDED) {
                     setMusicPlaying(false);
-                    // Auto-play next in playlist
                     playNextInPlaylist();
                 }
             },
@@ -876,9 +928,7 @@ async function fetchYtTitle(videoId) {
         if (!res.ok) throw new Error('fetch failed');
         const data = await res.json();
         return data.title || '🎵 Unknown Track';
-    } catch {
-        return '🎵 Track';
-    }
+    } catch { return '🎵 Track'; }
 }
 
 /* ============ PLAYLIST ============ */
@@ -903,7 +953,6 @@ function renderPlaylist() {
         return;
     }
 
-    // Sort by addedAt desc (newest first)
     entries.sort((a, b) => (b[1].addedAt || 0) - (a[1].addedAt || 0));
 
     list.innerHTML = entries.map(([vid, data], idx) => {
@@ -951,7 +1000,6 @@ async function addToPlaylist() {
 
     if (playlist[videoId]) {
         toast('ℹ️ ეს სიმღერა უკვე არის playlist-ში', 'error');
-        // Still play it
         playFromPlaylist(videoId);
         return;
     }
@@ -966,11 +1014,8 @@ async function addToPlaylist() {
         });
         $('ytLinkInput').value = '';
         toast('➕ დაემატა: ' + title, 'success');
-        // Auto-play added track
         playFromPlaylist(videoId);
-    } catch (err) {
-        toast('❌ ' + err.message, 'error');
-    }
+    } catch (err) { toast('❌ ' + err.message, 'error'); }
 }
 
 async function deleteFromPlaylist(videoId) {
@@ -979,21 +1024,13 @@ async function deleteFromPlaylist(videoId) {
     try {
         await db.ref('users/' + firebaseUser.uid + '/playlist/' + videoId).remove();
         toast('🗑 წაიშალა', 'success');
-        // If currently playing this track, stop
-        if (currentMusic?.videoId === videoId) {
-            stopMusic();
-        }
-    } catch (err) {
-        toast('❌ ' + err.message, 'error');
-    }
+        if (currentMusic?.videoId === videoId) stopMusic();
+    } catch (err) { toast('❌ ' + err.message, 'error'); }
 }
 
 async function playFromPlaylist(videoId) {
-    if (!firebaseUser) return;
-    if (!ytPlayerReady) {
-        toast('⏳ მოთამაშე იტვირთება...', 'error');
-        return;
-    }
+    if (!firebaseUser || !currentUser) return;
+    if (!ytPlayerReady) { toast('⏳ მოთამაშე იტვირთება...', 'error'); return; }
     const data = playlist[videoId];
     if (!data) { toast('❌ სიმღერა ვერ მოიძებნა', 'error'); return; }
 
@@ -1006,12 +1043,14 @@ async function playFromPlaylist(videoId) {
             playing: true,
             updatedAt: Date.now()
         });
+        // Sync public profile music
+        await syncPublicProfile(currentUser.memberName, {
+            music: { videoId, title: data.title, playing: true }
+        });
         updateMusicUI();
         renderPlaylist();
         toast('🎵 ' + data.title, 'success');
-    } catch (err) {
-        toast('❌ ' + err.message, 'error');
-    }
+    } catch (err) { toast('❌ ' + err.message, 'error'); }
 }
 
 function playNextInPlaylist() {
@@ -1044,7 +1083,7 @@ function stopMusicSilent() {
 }
 
 async function setMusicPlaying(playing) {
-    if (!firebaseUser) return;
+    if (!firebaseUser || !currentUser) return;
     try {
         if (currentMusic) {
             await db.ref('users/' + firebaseUser.uid + '/music').update({
@@ -1053,8 +1092,16 @@ async function setMusicPlaying(playing) {
                 playing: playing,
                 updatedAt: Date.now()
             });
+            await syncPublicProfile(currentUser.memberName, {
+                music: {
+                    videoId: currentMusic.videoId,
+                    title: currentMusic.title,
+                    playing: playing
+                }
+            });
         } else if (!playing) {
             await db.ref('users/' + firebaseUser.uid + '/music/playing').set(false);
+            await syncPublicProfile(currentUser.memberName, { 'music/playing': false });
         }
     } catch (err) { console.error('setMusicPlaying error:', err); }
 }
@@ -1309,30 +1356,6 @@ $('gameSearch')?.addEventListener('input', (e) => {
     gamesHeading.textContent = `Search: "${q}" (${filtered.length})`;
 });
 
-/* ============ FEATURED ============ */
-function renderFeatured() {
-    const dayIndex = new Date().getDate() % gamesData.length;
-    const g = gamesData[dayIndex];
-    const el = $('featuredSection');
-    if (!el) return;
-    el.innerHTML = `
-        <div class="featured-card">
-            <img src="${g.image}" alt="${g.title}" onerror="this.src='https://picsum.photos/seed/${g.id}/800/500'">
-            <div class="featured-info">
-                <h3>${g.title}</h3>
-                <div class="featured-genre">${g.genre}</div>
-                <p>${g.desc}</p>
-                <div style="margin-bottom:18px;">
-                    <span style="color:var(--gold-light); font-weight:700;">⭐ ${g.rating}</span>
-                    &nbsp;•&nbsp;
-                    <span style="color:var(--text-dim);">📥 ${g.downloads}</span>
-                </div>
-                <div><button class="btn-primary" onclick="openGameModal(${g.id})">🎮 Details</button></div>
-            </div>
-        </div>
-    `;
-}
-
 /* ============ LIVE STATS ============ */
 function animateNumber(el, target, duration = 1500) {
     const start = 0;
@@ -1481,11 +1504,10 @@ $('musicModal')?.addEventListener('click', (e) => { if (e.target.id === 'musicMo
     renderThemes();
     renderGames();
     renderComingSoon();
-    renderFeatured();
     renderRecentlyViewed();
     initLiveStats();
     listenMemberSlots();
-    listenUsers();
+    listenPublicProfiles();   // 👈 reads public data (no auth needed)
     listenRecommendation();
     updateAuthUI();
     renderPlaylist();
