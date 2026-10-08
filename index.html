@@ -3,1153 +3,304 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <link rel="apple-touch-icon" sizes="180x180" href="/path/to/apple-touch-icon.png">
-     <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="icon" type="image/png" href="favicon.png">
     <title>🎯 Mission: Play | Premium Gaming Hub</title>
-    <style>
-        :root {
-            --bg: #06060a;
-            --bg2: #0d0d14;
-            --gold: #d4a745;
-            --gold-light: #f0d078;
-            --gold-dark: #8b6914;
-            --card-bg: rgba(20, 20, 35, 0.7);
-            --card-border: rgba(212, 167, 69, 0.25);
-            --text: #e0dcd0;
-            --text-dim: #9998a0;
-            --accent: #7b5ea7;
-            --accent2: #c44569;
-            --glow-gold: 0 0 30px rgba(212, 167, 69, 0.4);
-            --glow-card: 0 0 25px rgba(120, 80, 180, 0.3);
-            --radius: 20px;
-            --radius-sm: 12px;
-            --transition: 0.4s cubic-bezier(0.25, 0.8, 0.25, 1.2);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-            font-size: 16px;
-        }
-
-        body {
-            font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            overflow-x: hidden;
-            line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        #particles-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .main-wrapper {
-            position: relative;
-            z-index: 1;
-        }
-
-        /* ===== NAVIGATION ===== */
-        .navbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            padding: 14px 30px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: rgba(10, 10, 18, 0.75);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border-bottom: 1px solid rgba(212, 167, 69, 0.2);
-            transition: all 0.4s ease;
-        }
-        .navbar.scrolled {
-            padding: 10px 30px;
-            background: rgba(6, 6, 10, 0.9);
-            border-bottom: 1px solid rgba(212, 167, 69, 0.35);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
-        }
-        .nav-logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1.6rem;
-            font-weight: 800;
-            letter-spacing: 1px;
-            color: var(--gold-light);
-            text-decoration: none;
-            cursor: pointer;
-            user-select: none;
-        }
-        .nav-logo .logo-icon {
-            font-size: 2rem;
-            animation: logoPulse 2.5s ease-in-out infinite;
-        }
-        @keyframes logoPulse {
-            0%, 100% {
-                transform: scale(1);
-                filter: drop-shadow(0 0 8px rgba(240, 208, 120, 0.6));
-            }
-            50% {
-                transform: scale(1.15);
-                filter: drop-shadow(0 0 20px rgba(240, 208, 120, 0.9));
-            }
-        }
-        .nav-links {
-            display: flex;
-            list-style: none;
-            gap: 30px;
-            align-items: center;
-        }
-        .nav-links a {
-            color: var(--text-dim);
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 0.95rem;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-            position: relative;
-            padding: 6px 0;
-        }
-        .nav-links a::after {
-            content: '';
-            position: absolute;
-            bottom: -2px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: var(--gold);
-            border-radius: 2px;
-            transition: width 0.3s ease;
-        }
-        .nav-links a:hover {
-            color: var(--gold-light);
-        }
-        .nav-links a:hover::after {
-            width: 100%;
-        }
-        .nav-links .btn-nav {
-            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
-            color: #1a1a1a;
-            padding: 10px 22px;
-            border-radius: 30px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            border: none;
-            cursor: pointer;
-            transition: all 0.35s ease;
-            box-shadow: 0 4px 18px rgba(212, 167, 69, 0.35);
-            text-decoration: none;
-            font-size: 0.9rem;
-        }
-        .btn-nav:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 30px rgba(212, 167, 69, 0.55);
-            background: linear-gradient(135deg, var(--gold), var(--gold-light));
-            color: #000;
-        }
-        .hamburger {
-            display: none;
-            flex-direction: column;
-            gap: 6px;
-            cursor: pointer;
-            z-index: 1001;
-            padding: 8px;
-        }
-        .hamburger span {
-            width: 30px;
-            height: 3px;
-            background: var(--gold-light);
-            border-radius: 3px;
-            transition: all 0.35s ease;
-        }
-        .hamburger.active span:nth-child(1) {
-            transform: rotate(45deg) translate(7px, 7px);
-        }
-        .hamburger.active span:nth-child(2) {
-            opacity: 0;
-            transform: scaleX(0);
-        }
-        .hamburger.active span:nth-child(3) {
-            transform: rotate(-45deg) translate(6px, -6px);
-        }
-
-        /* ===== HERO ===== */
-        .hero {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 140px 30px 60px;
-            position: relative;
-        }
-        .profiles-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 30px;
-            margin-bottom: 40px;
-            flex-wrap: wrap;
-        }
-        .profile-card {
-            background: rgba(20, 20, 35, 0.7);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border: 1px solid rgba(212, 167, 69, 0.2);
-            border-radius: 24px;
-            padding: 20px 28px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.4s ease;
-            animation: floatProfile 3s ease-in-out infinite;
-            min-width: 150px;
-        }
-        .profile-card:nth-child(2) {
-            background: rgba(30, 20, 50, 0.8);
-            border-color: var(--gold);
-            box-shadow: 0 0 35px rgba(212, 167, 69, 0.45);
-            transform: scale(1.08);
-            animation: floatProfileDev 3s ease-in-out infinite;
-        }
-        .profile-card:hover {
-            transform: translateY(-8px);
-            border-color: var(--gold-light);
-        }
-        .profile-card:nth-child(2):hover {
-            transform: translateY(-8px) scale(1.08);
-        }
-        @keyframes floatProfile {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-8px); }
-        }
-        @keyframes floatProfileDev {
-            0%, 100% { transform: translateY(0) scale(1.08); }
-            50% { transform: translateY(-10px) scale(1.08); }
-        }
-        .profile-avatar {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid var(--gold);
-            box-shadow: 0 0 20px rgba(212, 167, 69, 0.3);
-            background: #1a1a2e;
-        }
-        .profile-card:nth-child(2) .profile-avatar {
-            width: 80px;
-            height: 80px;
-            border-color: #f0d078;
-            box-shadow: 0 0 30px rgba(240, 208, 120, 0.5);
-        }
-        .profile-name {
-            font-weight: 700;
-            font-size: 1rem;
-            color: #e0dcd0;
-            letter-spacing: 0.3px;
-        }
-        .profile-role {
-            font-size: 0.7rem;
-            color: var(--gold-light);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .developer-badge {
-            background: linear-gradient(135deg, #b8860b, #f0d078);
-            color: #000;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            letter-spacing: 0.8px;
-            margin-top: 2px;
-        }
-        .hero-content {
-            max-width: 800px;
-            animation: fadeInUp 1s ease-out;
-        }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .hero-badge {
-            display: inline-block;
-            background: rgba(212, 167, 69, 0.15);
-            border: 1px solid rgba(212, 167, 69, 0.4);
-            color: var(--gold-light);
-            padding: 8px 20px;
-            border-radius: 30px;
-            font-size: 0.85rem;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin-bottom: 24px;
-            backdrop-filter: blur(10px);
-        }
-        .hero h1 {
-            font-size: clamp(2.8rem, 6vw, 5rem);
-            font-weight: 900;
-            letter-spacing: -1px;
-            line-height: 1.1;
-            margin-bottom: 16px;
-            background: linear-gradient(180deg, #fef5d0 0%, #d4a745 40%, #8b6914 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            filter: drop-shadow(0 4px 20px rgba(212, 167, 69, 0.5));
-        }
-        .hero p {
-            font-size: 1.2rem;
-            color: var(--text-dim);
-            max-width: 550px;
-            margin: 0 auto 36px;
-            line-height: 1.7;
-        }
-        .hero-buttons {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #b8860b, #d4a745, #f0d078);
-            color: #1a1a1a;
-            padding: 14px 34px;
-            border-radius: 40px;
-            font-weight: 700;
-            font-size: 1rem;
-            letter-spacing: 0.5px;
-            border: none;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.4s ease;
-            box-shadow: 0 6px 28px rgba(212, 167, 69, 0.4);
-            position: relative;
-            overflow: hidden;
-        }
-        .btn-primary:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 40px rgba(240, 208, 120, 0.6);
-        }
-        .btn-primary::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, transparent 60%);
-            opacity: 0;
-            transition: opacity 0.4s;
-        }
-        .btn-primary:hover::before { opacity: 1; }
-        .btn-secondary {
-            background: transparent;
-            color: var(--gold-light);
-            padding: 13px 32px;
-            border-radius: 40px;
-            font-weight: 600;
-            font-size: 1rem;
-            border: 2px solid rgba(212, 167, 69, 0.5);
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.35s ease;
-            backdrop-filter: blur(8px);
-        }
-        .btn-secondary:hover {
-            border-color: var(--gold);
-            background: rgba(212, 167, 69, 0.1);
-            box-shadow: 0 0 30px rgba(212, 167, 69, 0.3);
-            transform: translateY(-3px);
-        }
-
-        /* ===== SECTIONS ===== */
-        .section-title {
-            text-align: center;
-            margin-bottom: 50px;
-        }
-        .section-title .label {
-            display: inline-block;
-            color: var(--gold);
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        .section-title h2 {
-            font-size: clamp(2rem, 4vw, 3rem);
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            color: #f0e6d3;
-            text-shadow: 0 2px 15px rgba(200, 160, 80, 0.3);
-        }
-        .section-title .line {
-            width: 70px;
-            height: 3px;
-            background: linear-gradient(90deg, transparent, var(--gold), transparent);
-            margin: 14px auto 0;
-            border-radius: 3px;
-        }
-        .filter-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(212, 167, 69, 0.1);
-            border: 1px solid var(--card-border);
-            color: var(--gold-light);
-            padding: 8px 20px;
-            border-radius: 30px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            margin-top: 10px;
-        }
-        .filter-indicator button {
-            background: none;
-            border: none;
-            color: var(--gold);
-            font-weight: 700;
-            cursor: pointer;
-            font-size: 0.9rem;
-            margin-left: 4px;
-            transition: color 0.2s;
-        }
-        .filter-indicator button:hover { color: #fff; }
-
-        .games-section {
-            padding: 70px 30px 40px;
-            max-width: 1300px;
-            margin: 0 auto;
-        }
-        .games-grid, .coming-soon-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 28px;
-        }
-        .coming-soon-grid {
-            margin-top: 40px;
-        }
-        .game-card, .placeholder-card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: var(--radius);
-            overflow: hidden;
-            transition: all var(--transition);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            animation: cardAppear 0.4s ease-out forwards;
-            opacity: 0;
-        }
-        .game-card:hover, .placeholder-card:hover {
-            transform: translateY(-12px);
-            border-color: rgba(212, 167, 69, 0.55);
-            box-shadow: var(--glow-card), 0 20px 50px rgba(0, 0, 0, 0.5);
-        }
-        .game-card-image, .placeholder-image {
-            position: relative;
-            width: 100%;
-            height: 200px;
-            overflow: hidden;
-            flex-shrink: 0;
-        }
-        .game-card-image .img-bg, .placeholder-image .img-bg {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.6s ease;
-            display: block;
-        }
-        .game-card:hover .game-card-image .img-bg,
-        .placeholder-card:hover .placeholder-image .img-bg {
-            transform: scale(1.08);
-        }
-        .game-card-image .overlay, .placeholder-image .overlay {
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(180deg, transparent 40%, rgba(6, 6, 10, 0.85) 100%);
-        }
-        .game-badge, .placeholder-badge {
-            position: absolute;
-            top: 14px;
-            right: 14px;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px);
-            color: var(--gold-light);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            letter-spacing: 1px;
-            border: 1px solid rgba(212, 167, 69, 0.4);
-        }
-        .placeholder-badge {
-            background: rgba(30, 30, 50, 0.8);
-            color: #aaa;
-            border-color: rgba(255,255,255,0.1);
-        }
-        .game-card-body, .placeholder-body {
-            padding: 20px 22px 22px;
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-        .game-card-body h3, .placeholder-body .lock-icon {
-            font-size: 2.5rem;
-            color: #f0e6d3;
-            margin-bottom: 10px;
-        }
-        .game-card-body .genre {
-            font-size: 0.8rem;
-            color: var(--gold);
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-        .game-card-body .desc {
-            font-size: 0.9rem;
-            color: var(--text-dim);
-            line-height: 1.5;
-            flex-grow: 1;
-            margin-bottom: 16px;
-        }
-        .game-card-body .meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            font-size: 0.8rem;
-            color: #aaa;
-        }
-        .game-card-body .rating { color: var(--gold-light); font-weight: 700; }
-        .btn-download {
-            display: block;
-            width: 100%;
-            text-align: center;
-            background: linear-gradient(135deg, #1a1a2e, #2a2040);
-            color: var(--gold-light);
-            padding: 12px;
-            border-radius: var(--radius-sm);
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            text-decoration: none;
-            border: 1px solid rgba(212, 167, 69, 0.4);
-            transition: all 0.35s ease;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-        .btn-download:hover {
-            background: linear-gradient(135deg, var(--gold-dark), #5c3d1a);
-            color: #fff;
-            border-color: var(--gold);
-            box-shadow: 0 0 25px rgba(212, 167, 69, 0.45);
-            letter-spacing: 1px;
-        }
-        .coming-soon-text {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #888;
-            margin-top: 5px;
-        }
-
-        /* ===== CATEGORIES (CENTERED) ===== */
-        .categories-section {
-            padding: 50px 30px 70px;
-            max-width: 900px;
-            margin: 0 auto;
-        }
-        .categories-flex {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-        .category-card {
-            background: var(--card-bg);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: var(--radius-sm);
-            padding: 28px 22px;
-            text-align: center;
-            transition: all 0.35s ease;
-            cursor: pointer;
-            backdrop-filter: blur(10px);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            user-select: none;
-            color: var(--text);
-            min-width: 150px;
-            flex: 1;
-            max-width: 200px;
-        }
-        .category-card:hover, .category-card.active {
-            border-color: var(--gold);
-            box-shadow: 0 0 30px rgba(212, 167, 69, 0.35);
-            transform: translateY(-6px);
-            background: rgba(30, 25, 50, 0.8);
-        }
-        .category-card .cat-icon {
-            font-size: 2.8rem;
-            transition: transform 0.4s ease;
-        }
-        .category-card:hover .cat-icon {
-            transform: scale(1.2) rotate(-5deg);
-        }
-        .category-card h4 {
-            font-weight: 700;
-            font-size: 1rem;
-            color: #e0dcd0;
-            text-transform: capitalize;
-        }
-
-        /* ===== FOOTER ===== */
-        .footer {
-            background: rgba(10, 10, 18, 0.9);
-            border-top: 1px solid rgba(212, 167, 69, 0.2);
-            padding: 50px 30px 30px;
-            text-align: center;
-            backdrop-filter: blur(20px);
-        }
-        .footer-content { max-width: 800px; margin: 0 auto; }
-        .footer-links {
-            display: flex;
-            gap: 24px;
-            flex-wrap: wrap;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-        .footer-links a {
-            color: var(--text-dim);
-            text-decoration: none;
-            transition: color 0.3s;
-            font-size: 0.9rem;
-        }
-        .footer-links a:hover { color: var(--gold-light); }
-        .footer p { color: #555; font-size: 0.8rem; }
-        .footer .gold-text { color: var(--gold); }
-
-        /* ===== MOBILE ===== */
-        .mobile-menu {
-            position: fixed;
-            top: 0;
-            right: -100%;
-            width: 75%;
-            max-width: 340px;
-            height: 100vh;
-            background: rgba(10, 10, 20, 0.95);
-            backdrop-filter: blur(30px);
-            z-index: 999;
-            padding: 90px 30px 40px;
-            transition: right 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
-            border-left: 1px solid rgba(212, 167, 69, 0.3);
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        .mobile-menu.active { right: 0; }
-        .mobile-menu a {
-            color: #e0dcd0;
-            text-decoration: none;
-            font-size: 1.2rem;
-            font-weight: 600;
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            transition: color 0.3s;
-        }
-        .mobile-menu a:hover { color: var(--gold-light); }
-        .mobile-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 998;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.4s;
-        }
-        .mobile-overlay.active { opacity: 1; pointer-events: all; }
-
-        @media (max-width: 900px) {
-            .nav-links { display: none; }
-            .hamburger { display: flex; }
-            .hero { padding: 120px 20px 50px; }
-            .profiles-container { gap: 15px; }
-            .profile-card { padding: 15px 20px; min-width: 120px; }
-            .games-grid, .coming-soon-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
-            .categories-flex { gap: 14px; }
-            .category-card { min-width: 120px; max-width: 160px; padding: 20px 14px; }
-        }
-        @media (max-width: 500px) {
-            .navbar { padding: 10px 16px; }
-            .hero h1 { font-size: 2.2rem; }
-            .hero p { font-size: 1rem; }
-            .profiles-container { flex-direction: column; gap: 16px; }
-            .profile-card:nth-child(2) { transform: scale(1); animation: floatProfile 3s ease-in-out infinite; }
-            .profile-card:nth-child(2):hover { transform: translateY(-8px) scale(1); }
-            .games-grid, .coming-soon-grid { grid-template-columns: 1fr; gap: 16px; }
-            .games-section, .categories-section { padding: 40px 14px 50px; }
-            .btn-primary, .btn-secondary { padding: 12px 24px; font-size: 0.9rem; }
-            .categories-flex { flex-direction: column; align-items: center; }
-            .category-card { max-width: 280px; width: 100%; }
-        }
-
-        @keyframes cardAppear {
-            from { opacity: 0; transform: translateY(40px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <canvas id="particles-canvas"></canvas>
-    <div class="mobile-overlay" id="mobileOverlay"></div>
-    <div class="mobile-menu" id="mobileMenu">
-        <a href="#home" onclick="closeMenu()">🏠 Home</a>
-        <a href="#games" onclick="closeMenu()">🎮 Games</a>
-        <a href="#categories" onclick="closeMenu()">📂 Categories</a>
-        <a href="#downloads" onclick="closeMenu()" style="background:linear-gradient(135deg,#8b6914,#d4a745);color:#000;text-align:center;border-radius:30px;padding:12px;margin-top:10px;border:none;font-weight:700;">🔥 Free Games</a>
-    </div>
+<body data-theme="royal-gold">
 
-    <div class="main-wrapper">
-        <nav class="navbar" id="navbar">
-            <a href="#home" class="nav-logo">
-                <span class="logo-icon">🎯</span> Mission<span style="color:#d4a745;">Play</span>
-            </a>
-            <ul class="nav-links">
-                <li><a href="#home">Home</a></li>
-                <li><a href="#games">Games</a></li>
-                <li><a href="#categories">Categories</a></li>
-                <li><a href="#downloads" class="btn-nav">⬇ Downloads</a></li>
-            </ul>
+<canvas id="particles-canvas"></canvas>
+
+<!-- ===== MOBILE MENU ===== -->
+<div class="mobile-overlay" id="mobileOverlay"></div>
+<div class="mobile-menu" id="mobileMenu">
+    <a href="#home" onclick="closeMenu()">🏠 Home</a>
+    <a href="#games" onclick="closeMenu()">🎮 Games</a>
+    <a href="#categories" onclick="closeMenu()">📂 Categories</a>
+    <a href="#community" onclick="closeMenu()">💬 Community</a>
+    <a href="#" onclick="event.preventDefault(); openProfileOrAuth(); closeMenu();" id="mobileAuthLink">👤 Sign In</a>
+</div>
+
+<div class="main-wrapper">
+    <!-- ===== NAVBAR ===== -->
+    <nav class="navbar" id="navbar">
+        <a href="#home" class="nav-logo">
+            <span class="logo-icon">🎯</span> Mission<span class="gold-text">Play</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="#home">Home</a></li>
+            <li><a href="#games">Games</a></li>
+            <li><a href="#categories">Categories</a></li>
+            <li><a href="#community">Community</a></li>
+        </ul>
+        <div class="nav-actions">
+            <button class="theme-btn" id="themeBtn" title="Change Theme">🎨</button>
+            <button class="btn-nav" id="authBtn">👤 Sign In</button>
+            <button class="profile-nav-btn" id="profileNavBtn" style="display:none;">
+                <span class="avatar-mini avatar-wrapper" data-frame="gold" data-anim="none">
+                    <img id="navAvatar" src="https://ui-avatars.com/api/?name=U&background=222&color=fff" alt="">
+                </span>
+                <span id="navNick">User</span>
+            </button>
             <div class="hamburger" id="hamburger" onclick="toggleMenu()">
                 <span></span><span></span><span></span>
             </div>
-        </nav>
+        </div>
+    </nav>
 
-        <section class="hero" id="home">
-            <div class="profiles-container">
-                <div class="profile-card">
-                    <img class="profile-avatar" src="https://cdn.discordapp.com/avatars/1063112261931110423/7a56ce3ede9ae5400c3b7f40989cf783.png?size=4096" alt="DarkTeddy">
-                    <span class="profile-name">DarkTeddy</span>
-                    <span class="profile-role">Gamer</span>
-                </div>
-                <div class="profile-card">
-                    <img class="profile-avatar" src="https://cdn.discordapp.com/avatars/1232394805213003817/548ebf47f06465022b97706775cbcfa9.png?size=4096" alt="OverRuled">
-                    <span class="profile-name">OverRuled</span>
-                    <span class="profile-role">Fullstack Dev</span>
-                    <span class="developer-badge">👑 Developer</span>
-                </div>
-                <div class="profile-card">
-                    <img class="profile-avatar" src="https://cdn.discordapp.com/avatars/1518641453373460572/f6ee5cfbc901926edc0576960ec91a78.png?size=4096" alt="ArLovelyy">
-                    <span class="profile-name">ArLovelyy</span>
-                    <span class="profile-role">Gamer</span>
-                </div>
+    <!-- ===== HERO ===== -->
+    <section class="hero" id="home">
+        <div class="profiles-container" id="heroProfiles"></div>
+        <div class="hero-content">
+            <div class="hero-badge">🏆 Premium Gaming 2026</div>
+            <h1>Choose Your<br>Favorite Genre</h1>
+            <p>Download the best games — cars, horror, survival. Filter by category and start playing.</p>
+            <div class="hero-buttons">
+                <a href="#games" class="btn-primary">🎮 Browse Games</a>
+                <a href="#categories" class="btn-secondary">📂 Categories</a>
             </div>
-            <div class="hero-content">
-                <div class="hero-badge">🏆 Premium Gaming 2026</div>
-                <h1>Choose Your<br>Favorite Genre</h1>
-                <p>Download the best games — cars, horror, survival. Filter by category easily and start playing.</p>
-                <div class="hero-buttons">
-                    <a href="#games" class="btn-primary">🎮 Browse Games</a>
-                    <a href="#categories" class="btn-secondary">📂 Categories</a>
-                </div>
-            </div>
-        </section>
+        </div>
+    </section>
 
-        <section class="categories-section" id="categories">
+    <!-- ===== CATEGORIES ===== -->
+    <section class="categories-section" id="categories">
+        <div class="section-title">
+            <div class="label">📂 Genres</div>
+            <h2>Categories</h2>
+            <div class="line"></div>
+        </div>
+        <div class="categories-flex" id="categoriesGrid"></div>
+        <div style="text-align:center; margin-top:25px;">
+            <button id="resetFilterBtn" class="btn-secondary" style="display:none;">📋 Show All Games</button>
+        </div>
+    </section>
+
+    <!-- ===== GAMES ===== -->
+    <section class="games-section" id="games">
+        <div class="section-title">
+            <div class="label">🎯 Games</div>
+            <h2 id="gamesHeading">All Games</h2>
+            <div class="line"></div>
+            <div id="filterIndicator" class="filter-indicator" style="display:none;">
+                <span id="filterLabel"></span>
+                <button id="clearFilterBtn">✕</button>
+            </div>
+        </div>
+
+        <div class="search-wrap">
+            <input type="text" id="gameSearch" placeholder="🔍 Search games...">
+            <span class="search-icon">🔍</span>
+        </div>
+        <div style="text-align:center; margin-bottom:40px;">
+            <button class="surprise-btn" onclick="surpriseMe()">🎲 Surprise Me!</button>
+        </div>
+
+        <div class="featured-section" id="featuredSection"></div>
+
+        <div class="live-stats">
+            <div class="live-stat"><div class="num" id="statPlayers">0</div><div class="lbl">🟢 Online Now</div></div>
+            <div class="live-stat"><div class="num" id="statGames">0</div><div class="lbl">🎮 Total Games</div></div>
+            <div class="live-stat"><div class="num" id="statDownloads">0</div><div class="lbl">📥 Downloads</div></div>
+        </div>
+
+        <div class="games-grid" id="gamesGrid"></div>
+
+        <section class="recent-section" id="recentSection">
             <div class="section-title">
-                <div class="label">📂 Genres</div>
-                <h2>Categories</h2>
+                <div class="label">⏱ History</div>
+                <h2>Recently Viewed</h2>
                 <div class="line"></div>
             </div>
-            <div class="categories-flex" id="categoriesGrid"></div>
-            <div style="text-align: center; margin-top: 25px;">
-                <button id="resetFilterBtn" class="btn-secondary" style="display:none;">📋 Show All Games</button>
-            </div>
+            <div class="recent-list" id="recentList"></div>
         </section>
 
-        <section class="games-section" id="games">
+        <div style="margin-top:50px;">
             <div class="section-title">
-                <div class="label">🎯 Games</div>
-                <h2 id="gamesHeading">All Games</h2>
+                <div class="label">🔮 Soon</div>
+                <h2>More Games Coming</h2>
                 <div class="line"></div>
-                <div id="filterIndicator" class="filter-indicator" style="display: none;">
-                    <span id="filterLabel"></span>
-                    <button id="clearFilterBtn">✕</button>
-                </div>
             </div>
-            <div class="games-grid" id="gamesGrid"></div>
-            <!-- COMING SOON SECTION -->
-            <div style="margin-top: 50px;">
-                <div class="section-title">
-                    <div class="label">🔮 Soon</div>
-                    <h2>More Games Coming</h2>
-                    <div class="line"></div>
-                </div>
-                <div class="coming-soon-grid" id="comingSoonGrid"></div>
-            </div>
-        </section>
+            <div class="coming-soon-grid" id="comingSoonGrid"></div>
+        </div>
+    </section>
 
-        <footer class="footer">
-            <div class="footer-content">
-                <div class="footer-links">
-                    <a href="#home">Home</a>
-                    <a href="#games">Games</a>
-                    <a href="#categories">Categories</a>
-                    <a href="#">Terms</a>
-                    <a href="https://www.instagram.com/gurika.q713">Contact</a>
-                </div>
-                <p>© 2026 <span class="gold-text">Mission: Play</span> — All rights reserved</p>
+    <!-- ===== COMMUNITY ===== -->
+    <section class="community-section" id="community">
+        <h2>💬 Join Our Community</h2>
+        <p>შემოდი ჩვენს Discord-ზე — ნახე ახალი თამაშები პირველი, ითამაშე სხვებთან ერთად!</p>
+        <a href="https://discord.gg/" target="_blank" class="discord-btn">💬 Join Discord</a>
+    </section>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="#home">Home</a>
+                <a href="#games">Games</a>
+                <a href="#categories">Categories</a>
+                <a href="#">Terms</a>
+                <a href="https://www.instagram.com/gurika.q713">Contact</a>
             </div>
-        </footer>
+            <p>© 2026 <span class="gold-text">Mission: Play</span> — All rights reserved</p>
+        </div>
+    </footer>
+</div>
+
+<!-- ===== GAME MODAL ===== -->
+<div class="modal-overlay" id="gameModal">
+    <div class="modal-content" id="modalContent"></div>
+</div>
+
+<!-- ===== AUTH MODAL ===== -->
+<div class="modal-overlay" id="authModal">
+    <div class="modal-content auth-modal-content">
+        <button class="modal-close" onclick="closeAuthModal()">✕</button>
+        <div class="auth-header">
+            <div class="auth-logo">🎯 Mission<span class="gold-text">Play</span></div>
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login" id="tabLogin">Sign In</button>
+                <button class="auth-tab" data-tab="register" id="tabRegister">Register</button>
+            </div>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <form class="auth-form" id="loginForm">
+            <div class="input-group">
+                <label>📧 Email</label>
+                <input type="email" id="loginEmail" required placeholder="your@email.com">
+            </div>
+            <div class="input-group">
+                <label>🔒 Password</label>
+                <input type="password" id="loginPassword" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn-primary full-width" id="loginBtn">Sign In</button>
+            <div class="divider"><span>or</span></div>
+            <button type="button" class="google-btn" id="googleLoginBtn">
+                <svg viewBox="0 0 48 48" width="20" height="20"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+                Continue with Google
+            </button>
+            <p class="auth-error" id="loginError"></p>
+        </form>
+
+        <!-- REGISTER FORM -->
+        <form class="auth-form" id="registerForm" style="display:none;">
+            <div class="input-group">
+                <label>📧 Email</label>
+                <input type="email" id="regEmail" required placeholder="your@email.com">
+            </div>
+            <div class="input-group">
+                <label>🔒 Password (min 6 chars)</label>
+                <input type="password" id="regPassword" required minlength="6" placeholder="••••••••">
+            </div>
+
+            <div class="member-picker">
+                <label>🎭 Choose Your Identity</label>
+                <p class="hint">Each member can only be claimed by one person</p>
+                <div class="member-options" id="memberOptions"></div>
+            </div>
+
+            <button type="submit" class="btn-primary full-width" id="registerBtn">Create Account</button>
+            <div class="divider"><span>or</span></div>
+            <button type="button" class="google-btn" id="googleRegisterBtn">
+                <svg viewBox="0 0 48 48" width="20" height="20"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+                Continue with Google
+            </button>
+            <p class="auth-error" id="registerError"></p>
+        </form>
+
+        <div class="no-register-msg" id="noRegisterMsg" style="display:none;">
+            <div class="lock-icon-big">🔒</div>
+            <h3>Registration Closed</h3>
+            <p>All 3 members have been claimed. Only sign-in is available.</p>
+        </div>
     </div>
+</div>
 
-    <script>
-        // ==================== GAMES DATA (only the 4 real games) ====================
-        const gamesData = [
-            
-        
-        
-        { 
-                id: 1, 
-                title: 'DayZ', 
-                genre: 'Survival', 
-                desc: 'Fight to survive in a cannibal-infested forest. Build, craft, and defend yourself against terrifying mutants.', 
-                rating: '9.9', 
-                downloads: '2.1M', 
-                image: 'data:image/jpeg;base64,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', 
-                link: 'https://dayzavr.ru/download.html', 
-                badge: '🔥 Hot', 
-                category: 'survival'
-            },
-                    
-            { 
-                id: 2, 
-                title: 'Funnel Runners', 
-                genre: 'Survival', 
-                desc: 'Trapped in a doomed city, you and up to 7 friends must scavenge parts, fix your van, and escape the brutal tornado that approaches.', 
-                rating: '7.6', 
-                downloads: '25.8k', 
-                image: 'data:image/webp;base64,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', 
-                link: 'https://steamrip.com/funnel-runners-free-download/', 
-                badge: 'Online Soon', 
-                category: 'survival'
-            },
-        
-        { 
-                id: 3, 
-                title: 'Sons Of The Forest', 
-                genre: 'Horror / Survival', 
-                desc: 'Fight to survive in a cannibal-infested forest. Build, craft, and defend yourself against terrifying mutants.', 
-                rating: '9.4', 
-                downloads: '2.1M', 
-                image: 'https://wallpapercave.com/wp/wp12152116.jpg', 
-                link: 'https://gtorr.net/index.php?newsid=3928', 
-                badge: '🔥 Hot', 
-                category: 'survival'
-            },
-            
-            
-            { 
-                id: 4, 
-                title: 'Backrooms: Escape Together', 
-                genre: 'Horror', 
-                desc: 'Survive In Inifinite Levels Of Backroom.', 
-                rating: '9.1', 
-                downloads: '1.2M', 
-                image: 'https://cdn.akamai.steamstatic.com/steam/apps/2141730/ss_7e94b69940005e3ba12c63d6ccc56386ff9141a9.jpg?t=1668069333', 
-                link: 'https://gtorr.net/index.php?newsid=3818', 
-                badge: '🏎️ New', 
-                category: 'horror'
-            },
-            { 
-                id: 5, 
-                title: 'Shift At Midnight', 
-                genre: 'Horror', 
-                desc: 'Survive In Store.', 
-                rating: '9.1', 
-                downloads: '1.2M', 
-                image: 'https://gtorr.net/uploads/posts/2026-08/1787854284_library_capsule.jpg', 
-                link: 'https://gtorr.net/index.php?newsid=5283', 
-                badge: '🏎️ New', 
-                category: 'horror'
-            },
-             { 
-                id: 6, 
-                title: 'WE ARE SO DEAD', 
-                genre: 'Horror', 
-                desc: 'co-op horror game.', 
-                rating: '7.0', 
-                downloads: '388K', 
-                image: 'https://steamrip.com/wp-content/uploads/2026/08/WE_ARE_SO_DEAD_featured_steamrip.jpg', 
-                link: 'https://steamrip.com/we-are-so-dead-free-download/', 
-                badge: '🏎️ New', 
-                category: 'horror'
-            },
-            { 
-                id: 7, 
-                title: 'Long Drive North', 
-                genre: 'Survival', 
-                desc: 'co-op Funny Survival game.', 
-                rating: '5.0', 
-                downloads: '15K', 
-                image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRDtOIEeDO-siGUTHup29dTsQxNEQ5B8Eth38yQAo5ppQiK0T7igUcZKH_rSK-iArOV_5dQK-syo96vKw0WtdSj9TkhqwLD94tPmhTNbjqG3w&s=10', 
-                link: 'https://drive.google.com/drive/folders/1CmEXv0uRAkEzfo1Nxjj6fW7L4UjlifNU?usp=sharing', 
-                badge: '🏎️ New', 
-                category: 'horror'
-            },
+<!-- ===== PROFILE MODAL ===== -->
+<div class="modal-overlay" id="profileModal">
+    <div class="modal-content profile-modal-content">
+        <button class="modal-close" onclick="closeProfileModal()">✕</button>
 
-              
-
-            
-             
-          
-
-
-        ];
-
-        const categoriesData = [
-            { icon: '🚗', name: 'cars' },
-            { icon: '👻', name: 'horror' },
-            { icon: '🧟', name: 'survival' }
-        ];
-
-        let currentFilter = null;
-        const gamesGrid = document.getElementById('gamesGrid');
-        const categoriesGrid = document.getElementById('categoriesGrid');
-        const gamesHeading = document.getElementById('gamesHeading');
-        const filterIndicator = document.getElementById('filterIndicator');
-        const filterLabel = document.getElementById('filterLabel');
-        const clearFilterBtn = document.getElementById('clearFilterBtn');
-        const resetFilterBtn = document.getElementById('resetFilterBtn');
-        const comingSoonGrid = document.getElementById('comingSoonGrid');
-
-        function createGameCard(game) {
-            return `
-                <div class="game-card">
-                    <div class="game-card-image">
-                        <img class="img-bg" src="${game.image}" alt="${game.title}">
-                        <div class="overlay"></div>
-                        <span class="game-badge">${game.badge}</span>
-                    </div>
-                    <div class="game-card-body">
-                        <span class="genre">${game.genre}</span>
-                        <h3>${game.title}</h3>
-                        <p class="desc">${game.desc}</p>
-                        <div class="meta">
-                            <span>⭐ <span class="rating">${game.rating}</span></span>
-                            <span>📥 ${game.downloads}</span>
-                        </div>
-                        <a href="${game.link}" target="_blank" rel="noopener" class="btn-download">
-                            <span class="icon">⬇️</span> Download
-                        </a>
-                    </div>
+        <div class="profile-header-section">
+            <div class="avatar-preview">
+                <div class="avatar-wrapper" id="profileAvatarWrapper" data-frame="gold" data-anim="none">
+                    <img id="profileAvatarImg" src="https://ui-avatars.com/api/?name=U&background=222&color=fff" alt="">
                 </div>
-            `;
-        }
+                <div class="role-badge" id="profileRoleBadge">Member</div>
+            </div>
+            <div class="profile-info-header">
+                <h2 id="profileDisplayName">User</h2>
+                <p id="profileMemberName" class="dim">Member: —</p>
+                <p id="profileEmail" class="dim small">—</p>
+            </div>
+        </div>
 
-        function createComingSoonCard(index) {
-            return `
-                <div class="placeholder-card">
-                    <div class="placeholder-image">
-                        <img class="img-bg" src="https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600&h=350&fit=crop" alt="Coming Soon">
-                        <div class="overlay"></div>
-                        <span class="placeholder-badge">🔒 Locked</span>
-                    </div>
-                    <div class="placeholder-body">
-                        <span class="lock-icon">❓</span>
-                        <div class="coming-soon-text">New Games Coming Soon</div>
-                    </div>
-                </div>
-            `;
-        }
+        <div class="profile-tabs">
+            <button class="profile-tab active" data-ptab="edit">✏️ Edit Profile</button>
+            <button class="profile-tab" data-ptab="frames">🖼 Frames</button>
+            <button class="profile-tab" data-ptab="admin" id="adminTab" style="display:none;">👑 Admin</button>
+        </div>
 
-        function createCategoryCard(cat) {
-            return `
-                <div class="category-card" data-category="${cat.name}">
-                    <span class="cat-icon">${cat.icon}</span>
-                    <h4>${cat.name}</h4>
-                </div>
-            `;
-        }
+        <!-- EDIT TAB -->
+        <div class="profile-tab-content" id="ptab-edit">
+            <div class="input-group">
+                <label>🏷 Nickname</label>
+                <input type="text" id="editNickname" maxlength="20" placeholder="Your nickname">
+            </div>
+            <div class="input-group">
+                <label>🖼 Avatar URL</label>
+                <input type="text" id="editAvatarUrl" placeholder="https://...">
+            </div>
+            <div class="input-group">
+                <label>📁 Or Upload Image</label>
+                <input type="file" id="editAvatarFile" accept="image/*">
+            </div>
+            <button class="btn-primary full-width" id="saveProfileBtn">💾 Save Changes</button>
+            <p class="auth-error" id="profileSaveMsg"></p>
+        </div>
 
-        function renderGames(filter = null) {
-            const filtered = filter ? gamesData.filter(g => g.category === filter) : gamesData;
-            gamesGrid.innerHTML = filtered.map(createGameCard).join('');
-            const cards = gamesGrid.querySelectorAll('.game-card');
-            cards.forEach((card, index) => { card.style.animationDelay = `${index * 0.07}s`; });
+        <!-- FRAMES TAB -->
+        <div class="profile-tab-content" id="ptab-frames" style="display:none;">
+            <h4>🎨 Choose Frame</h4>
+            <div class="frames-grid" id="framesGrid"></div>
+            <h4 style="margin-top:20px;">✨ Frame Animation</h4>
+            <div class="animations-grid" id="animationsGrid"></div>
+            <button class="btn-primary full-width" style="margin-top:20px;" id="saveFrameBtn">💾 Save Frame</button>
+        </div>
 
-            if (filter) {
-                gamesHeading.textContent = `${filter} (${filtered.length})`;
-                filterLabel.textContent = `Showing: ${filter}`;
-                filterIndicator.style.display = 'inline-flex';
-                resetFilterBtn.style.display = 'inline-block';
-            } else {
-                gamesHeading.textContent = 'All Games';
-                filterIndicator.style.display = 'none';
-                resetFilterBtn.style.display = 'none';
-            }
+        <!-- ADMIN TAB -->
+        <div class="profile-tab-content" id="ptab-admin" style="display:none;">
+            <h4>👑 Admin Panel</h4>
+            <div class="admin-users" id="adminUsersList"></div>
+            <button class="btn-secondary full-width" style="margin-top:15px;" id="resetAllSlotsBtn">🔄 Reset All Member Slots</button>
+        </div>
 
-            document.querySelectorAll('.category-card').forEach(card => {
-                card.classList.toggle('active', card.getAttribute('data-category') === filter);
-            });
-        }
+        <div class="profile-actions">
+            <button class="btn-secondary full-width" id="logoutBtn">🚪 Logout</button>
+        </div>
+    </div>
+</div>
 
-        function renderComingSoon() {
-            // Show 3 placeholder cards (unknown games)
-            const placeholderCount = 3;
-            let html = '';
-            for (let i = 0; i < placeholderCount; i++) {
-                html += createComingSoonCard(i);
-            }
-            comingSoonGrid.innerHTML = html;
-        }
+<!-- ===== THEME MODAL ===== -->
+<div class="modal-overlay" id="themeModal">
+    <div class="modal-content theme-modal-content">
+        <button class="modal-close" onclick="closeThemeModal()">✕</button>
+        <div class="section-title">
+            <div class="label">🎨 Themes</div>
+            <h2>Choose Your Theme</h2>
+            <div class="line"></div>
+        </div>
+        <div class="themes-grid" id="themesGrid"></div>
+    </div>
+</div>
 
-        function setFilter(category) {
-            if (currentFilter === category) {
-                clearFilter();
-            } else {
-                currentFilter = category;
-                renderGames(category);
-            }
-        }
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast"></div>
 
-        function clearFilter() {
-            currentFilter = null;
-            renderGames(null);
-        }
-
-        categoriesGrid.addEventListener('click', (e) => {
-            const card = e.target.closest('.category-card');
-            if (!card) return;
-            setFilter(card.getAttribute('data-category'));
-        });
-        clearFilterBtn.addEventListener('click', clearFilter);
-        resetFilterBtn.addEventListener('click', clearFilter);
-
-        // Initialize
-        categoriesGrid.innerHTML = categoriesData.map(createCategoryCard).join('');
-        renderGames();
-        renderComingSoon();
-
-        // ===== MOBILE MENU =====
-        const hamburger = document.getElementById('hamburger');
-        const mobileMenu = document.getElementById('mobileMenu');
-        const mobileOverlay = document.getElementById('mobileOverlay');
-        function toggleMenu() {
-            hamburger.classList.toggle('active');
-            mobileMenu.classList.toggle('active');
-            mobileOverlay.classList.toggle('active');
-            document.body.style.overflow = mobileMenu.classList.contains('active') ? 'hidden' : '';
-        }
-        function closeMenu() {
-            hamburger.classList.remove('active');
-            mobileMenu.classList.remove('active');
-            mobileOverlay.classList.remove('active');
-            document.body.style.overflow = '';
-        }
-        mobileOverlay.addEventListener('click', closeMenu);
-        document.querySelectorAll('.mobile-menu a').forEach(link => link.addEventListener('click', closeMenu));
-
-        window.addEventListener('scroll', () => {
-            document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 60);
-        });
-
-        // ===== PARTICLES =====
-        const canvas = document.getElementById('particles-canvas');
-        const ctx = canvas.getContext('2d');
-        let particles = [];
-        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-
-        class Particle {
-            constructor() { this.reset(); }
-            reset() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
-                this.size = Math.random() * 2 + 0.5;
-                this.speedX = (Math.random() - 0.5) * 0.6;
-                this.speedY = (Math.random() - 0.5) * 0.6;
-                this.opacity = Math.random() * 0.6 + 0.2;
-                this.golden = Math.random() < 0.15;
-            }
-            update() {
-                this.x += this.speedX;
-                this.y += this.speedY;
-                if (this.x < -10) this.x = canvas.width + 10;
-                if (this.x > canvas.width + 10) this.x = -10;
-                if (this.y < -10) this.y = canvas.height + 10;
-                if (this.y > canvas.height + 10) this.y = -10;
-                this.opacity = Math.max(0.1, Math.min(0.8, this.opacity + (Math.random() - 0.5) * 0.01));
-            }
-            draw() {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fillStyle = this.golden ? `rgba(240,208,120,${this.opacity})` : `rgba(180,170,200,${this.opacity})`;
-                if (this.golden) { ctx.shadowColor = 'rgba(240,208,120,0.7)'; ctx.shadowBlur = 6; }
-                ctx.fill();
-                ctx.shadowBlur = 0;
-            }
-        }
-        function initParticles(count = 80) {
-            particles = Array.from({ length: count }, () => new Particle());
-        }
-        initParticles(window.innerWidth < 600 ? 40 : 80);
-        window.addEventListener('resize', () => initParticles(window.innerWidth < 600 ? 40 : 80));
-
-        function animateParticles() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles.forEach(p => { p.update(); p.draw(); });
-            for (let i = 0; i < particles.length; i++) {
-                for (let j = i + 1; j < particles.length; j++) {
-                    const dx = particles[i].x - particles[j].x;
-                    const dy = particles[i].y - particles[j].y;
-                    if (Math.sqrt(dx*dx+dy*dy) < 100) {
-                        ctx.beginPath();
-                        ctx.moveTo(particles[i].x, particles[i].y);
-                        ctx.lineTo(particles[j].x, particles[j].y);
-                        ctx.strokeStyle = `rgba(200,170,130,${(1-Math.sqrt(dx*dx+dy*dy)/100)*0.15})`;
-                        ctx.lineWidth = 0.5;
-                        ctx.stroke();
-                    }
-                }
-            }
-            requestAnimationFrame(animateParticles);
-        }
-        animateParticles();
-
-        document.querySelectorAll('a[href^="#"]').forEach(a => {
-            a.addEventListener('click', function(e) {
-                const href = this.getAttribute('href');
-                if (href === '#') return;
-                e.preventDefault();
-                document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' });
-            });
-        });
-    </script>
+<!-- ===== FIREBASE ===== -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
