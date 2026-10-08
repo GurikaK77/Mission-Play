@@ -29,6 +29,7 @@ let currentUser = null;
 let firebaseUser = null;
 let memberSlots = {};
 let memberUserData = {};
+let nowPlayingByMember = {};   // { memberName: { videoId, title, playing } }
 let selectedMember = null;
 let currentFilter = null;
 let previewFrame = 'gold';
@@ -89,38 +90,32 @@ function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-/* ============ AUTO-MIGRATE: OverRuled → KEROSENE ============ */
+/* ============ AUTO-MIGRATE OverRuled → KEROSENE ============ */
 async function silentMigrate() {
     try {
-        // memberSlots
         const oldSlot = await db.ref('memberSlots/OverRuled').once('value');
         if (oldSlot.exists()) {
-            await db.ref('memberSlots/KEROSENE').set(oldSlot.val());
+            const uid = oldSlot.val();
+            // Move slot
+            await db.ref('memberSlots/KEROSENE').set(uid);
             await db.ref('memberSlots/OverRuled').remove();
-        }
-        // publicProfiles
-        const oldPP = await db.ref('publicProfiles/OverRuled').once('value');
-        if (oldPP.exists()) {
-            await db.ref('publicProfiles/KEROSENE').set(oldPP.val());
-            await db.ref('publicProfiles/OverRuled').remove();
-        }
-        // users memberName
-        const usersSnap = await db.ref('users').once('value');
-        const users = usersSnap.val() || {};
-        const updates = {};
-        for (const uid in users) {
-            if (users[uid].memberName === 'OverRuled') {
-                updates['users/' + uid + '/memberName'] = 'KEROSENE';
+            // Move user.memberName
+            await db.ref('users/' + uid + '/memberName').set('KEROSENE');
+            // Move publicProfile
+            const oldPP = await db.ref('publicProfiles/OverRuled').once('value');
+            if (oldPP.exists()) {
+                await db.ref('publicProfiles/KEROSENE').set(oldPP.val());
+                await db.ref('publicProfiles/OverRuled').remove();
             }
-        }
-        if (Object.keys(updates).length) await db.ref().update(updates);
-        // recommendation
-        const recSnap = await db.ref('recommendation').once('value');
-        if (recSnap.exists() && recSnap.val().recommendedBy === 'OverRuled') {
-            await db.ref('recommendation/recommendedBy').set('KEROSENE');
+            // Move recommendation
+            const recSnap = await db.ref('recommendation').once('value');
+            if (recSnap.exists() && recSnap.val().recommendedBy === 'OverRuled') {
+                await db.ref('recommendation/recommendedBy').set('KEROSENE');
+            }
+            console.log('✅ Migration: OverRuled → KEROSENE');
         }
     } catch (e) {
-        // silent
+        console.warn('Migration error:', e.message);
     }
 }
 
@@ -131,6 +126,40 @@ async function syncPublicProfile(memberName, data) {
         await db.ref('publicProfiles/' + memberName).update(data);
     } catch (err) {
         console.warn('Public profile sync failed:', err.message);
+    }
+}
+
+/* ============ NOW PLAYING (uid-based, works for everyone) ============ */
+function listenNowPlaying() {
+    db.ref('nowPlaying').on('value', snap => {
+        const np = snap.val() || {};
+        nowPlayingByMember = {};
+        for (const uid in np) {
+            const data = np[uid];
+            if (data && data.memberName) {
+                nowPlayingByMember[data.memberName] = data;
+            }
+        }
+        renderHeroProfiles();
+    }, () => {});
+}
+
+async function setNowPlaying(data) {
+    if (!firebaseUser || !currentUser) return;
+    try {
+        if (data === null) {
+            await db.ref('nowPlaying/' + firebaseUser.uid).remove();
+        } else {
+            await db.ref('nowPlaying/' + firebaseUser.uid).set({
+                memberName: currentUser.memberName,
+                videoId: data.videoId || '',
+                title: data.title || '',
+                playing: data.playing === true,
+                updatedAt: Date.now()
+            });
+        }
+    } catch (err) {
+        console.warn('setNowPlaying failed:', err.message);
     }
 }
 
@@ -186,7 +215,6 @@ function listenMemberSlots() {
     });
 }
 
-/* Read PUBLIC profiles — works for everyone (logged in or not) */
 function listenPublicProfiles() {
     db.ref('publicProfiles').on('value', snap => {
         const pp = snap.val() || {};
@@ -197,7 +225,6 @@ function listenPublicProfiles() {
     }, () => {});
 }
 
-/* Read users — only works when authenticated. Overrides publicProfiles data for logged-in users */
 function listenUsers() {
     if (!firebaseUser) return;
     db.ref('users').on('value', snap => {
@@ -262,7 +289,7 @@ function checkRegistrationAvailability() {
     }
 }
 
-/* ============ HERO PROFILES ============ */
+/* ============ HERO PROFILES (reads nowPlaying from uid-based node) ============ */
 function renderHeroProfiles() {
     const container = $('heroProfiles');
     if (!container) return;
@@ -278,8 +305,8 @@ function renderHeroProfiles() {
         const anim = userData?.frameAnimation || (isAdmin ? 'glow' : 'none');
         const nickname = userData?.nickname || m.name;
 
-        // Music badge — playing true + title present
-        const music = userData?.music;
+        // 🎵 Music from nowPlayingByMember (uid-based, always visible)
+        const music = nowPlayingByMember[m.name];
         const isPlaying = music?.playing === true && music?.title;
         const musicBadge = isPlaying ? `
             <div class="profile-music" title="${escapeHtml(music.title)}">
@@ -443,8 +470,7 @@ $('registerForm')?.addEventListener('submit', async (e) => {
                 avatar: memberInfo.avatar,
                 frame: role === 'admin' ? 'royal' : 'gold',
                 frameAnimation: role === 'admin' ? 'glow' : 'none',
-                role,
-                music: { playing: false }
+                role
             });
         } catch (dbErr) {
             await db.ref('memberSlots/' + selectedMember).remove().catch(() => {});
@@ -472,6 +498,7 @@ $('loginForm')?.addEventListener('submit', async (e) => {
     }
 });
 
+/* ============ GOOGLE AUTH (Fixed race condition) ============ */
 async function googleAuth(isRegister) {
     const errEl = isRegister ? $('registerError') : $('loginError');
     if (errEl) { errEl.textContent = ''; errEl.className = 'auth-error'; }
@@ -502,13 +529,16 @@ async function googleAuth(isRegister) {
     }
 }
 
+/* getRedirectResult — runs when returning from Google */
 auth.getRedirectResult().then(async (result) => {
     if (!result || !result.user) return;
+
     const uid = result.user.uid;
     const email = result.user.email;
     const isRegister = localStorage.getItem('mp-pending-register') === 'true';
     const pendingMember = localStorage.getItem('mp-pending-member');
 
+    // Check if user already has record
     const snap = await db.ref('users/' + uid).once('value');
     if (snap.exists()) {
         localStorage.removeItem('mp-pending-member');
@@ -518,6 +548,7 @@ auth.getRedirectResult().then(async (result) => {
         return;
     }
 
+    // New user — need member selection
     if (!isRegister || !pendingMember) {
         await auth.signOut();
         toast('⚠️ გამოიყენე Register ტაბი', 'error');
@@ -526,6 +557,7 @@ auth.getRedirectResult().then(async (result) => {
         return;
     }
 
+    // Slot already taken?
     if (memberSlots[pendingMember]) {
         await auth.signOut();
         toast('🔒 წევრი უკვე დაკავებულია', 'error');
@@ -534,6 +566,7 @@ auth.getRedirectResult().then(async (result) => {
         return;
     }
 
+    // Claim slot
     const claimed = await claimMemberSlot(pendingMember, uid);
     if (!claimed) {
         await auth.signOut();
@@ -565,30 +598,47 @@ auth.getRedirectResult().then(async (result) => {
             avatar: initialAvatar,
             frame: role === 'admin' ? 'royal' : 'gold',
             frameAnimation: role === 'admin' ? 'glow' : 'none',
-            role,
-            music: { playing: false }
+            role
         });
+        localStorage.removeItem('mp-pending-member');
+        localStorage.removeItem('mp-pending-register');
         toast('🎉 Welcome, ' + pendingMember + '!', 'success');
         closeAuthModal();
     } catch (dbErr) {
         await db.ref('memberSlots/' + pendingMember).remove().catch(() => {});
         await auth.signOut().catch(() => {});
-        toast('❌ ' + dbErr.message, 'error');
-    } finally {
         localStorage.removeItem('mp-pending-member');
         localStorage.removeItem('mp-pending-register');
+        toast('❌ ' + dbErr.message, 'error');
     }
 }).catch(err => console.error('Redirect result error:', err));
 
 $('googleLoginBtn')?.addEventListener('click', () => googleAuth(false));
 $('googleRegisterBtn')?.addEventListener('click', () => googleAuth(true));
 
-/* ============ AUTH STATE ============ */
+/* ============ AUTH STATE (fixed — waits for pending redirect) ============ */
 auth.onAuthStateChanged(async (user) => {
     firebaseUser = user;
     if (user) {
-        // Run silent migration once per session
-        silentMigrate();
+        // If we have a pending Google redirect — DON'T sign out, let getRedirectResult handle it
+        const isPending = localStorage.getItem('mp-pending-member') && localStorage.getItem('mp-pending-register');
+        if (isPending) {
+            // Wait a moment for getRedirectResult to complete
+            for (let i = 0; i < 10; i++) {
+                await new Promise(r => setTimeout(r, 300));
+                const check = await db.ref('users/' + user.uid).once('value');
+                if (check.exists()) break;
+            }
+            // Re-check
+            const finalCheck = await db.ref('users/' + user.uid).once('value');
+            if (!finalCheck.exists()) {
+                // getRedirectResult didn't create it — try once more
+                return;
+            }
+        }
+
+        // Run migration
+        await silentMigrate();
 
         const snap = await db.ref('users/' + user.uid).once('value');
         if (snap.exists()) {
@@ -596,17 +646,8 @@ auth.onAuthStateChanged(async (user) => {
             if (currentUser.theme) applyTheme(currentUser.theme);
             updateAuthUI();
             db.ref('users/' + user.uid + '/music/playing').onDisconnect().set(false);
-            if (currentUser.memberName) {
-                db.ref('publicProfiles/' + currentUser.memberName + '/music/playing')
-                    .onDisconnect().set(false);
-                syncPublicProfile(currentUser.memberName, {
-                    nickname: currentUser.nickname,
-                    avatar: currentUser.avatar,
-                    frame: currentUser.frame,
-                    frameAnimation: currentUser.frameAnimation,
-                    role: currentUser.role
-                });
-            }
+            // onDisconnect for nowPlaying
+            db.ref('nowPlaying/' + user.uid).onDisconnect().update({ playing: false }).catch(() => {});
             listenPlaylist();
             listenUsers();
             if (currentUser.music?.videoId) {
@@ -617,6 +658,7 @@ auth.onAuthStateChanged(async (user) => {
             }
             updateMusicUI();
         } else {
+            // Truly orphan user
             await auth.signOut();
         }
     } else {
@@ -835,7 +877,8 @@ $('saveFrameBtn')?.addEventListener('click', async () => {
 $('logoutBtn')?.addEventListener('click', async () => {
     if (firebaseUser && currentUser) {
         await db.ref('users/' + firebaseUser.uid + '/music/playing').set(false).catch(() => {});
-        await syncPublicProfile(currentUser.memberName, { music: { playing: false } }).catch(() => {});
+        // Clear nowPlaying
+        await db.ref('nowPlaying/' + firebaseUser.uid).remove().catch(() => {});
     }
     await auth.signOut();
     closeProfileModal();
@@ -876,6 +919,7 @@ async function loadAdminUsers() {
                     await db.ref('memberSlots/' + memberName).remove();
                     await db.ref('users/' + uid).remove();
                     await db.ref('publicProfiles/' + memberName).remove().catch(() => {});
+                    await db.ref('nowPlaying/' + uid).remove().catch(() => {});
                     toast('🔄 Slot released', 'success');
                     loadAdminUsers();
                 } catch (err) { toast('❌ ' + err.message, 'error'); }
@@ -945,7 +989,7 @@ function initYTPlayer() {
             onStateChange: (e) => {
                 updateMusicUI();
                 if (e.data === YT.PlayerState.ENDED) {
-                    setMusicPlaying(false);
+                    setNowPlaying(null);
                     playNextInPlaylist();
                 }
             },
@@ -1083,7 +1127,7 @@ async function playFromPlaylist(videoId) {
         ytPlayer.loadVideoById(videoId);
         currentMusic = { videoId, title: data.title };
 
-        // Write to private
+        // Save to private
         await db.ref('users/' + firebaseUser.uid + '/music').set({
             videoId,
             title: data.title,
@@ -1091,18 +1135,8 @@ async function playFromPlaylist(videoId) {
             updatedAt: Date.now()
         });
 
-        // Write to public (for everyone)
-        await syncPublicProfile(currentUser.memberName, {
-            music: { videoId, title: data.title, playing: true }
-        });
-
-        // Update local memberUserData for instant render
-        if (currentUser.memberName) {
-            memberUserData[currentUser.memberName] = Object.assign({}, memberUserData[currentUser.memberName] || {}, {
-                music: { videoId, title: data.title, playing: true }
-            });
-            renderHeroProfiles();
-        }
+        // 🎵 Save to PUBLIC nowPlaying (uid-based)
+        await setNowPlaying({ videoId, title: data.title, playing: true });
 
         updateMusicUI();
         renderPlaylist();
@@ -1125,14 +1159,8 @@ async function stopMusic() {
     if (ytPlayer && ytPlayerReady) {
         try { ytPlayer.stopVideo(); } catch {}
     }
-    await setMusicPlaying(false);
+    await setNowPlaying({ playing: false, videoId: currentMusic?.videoId, title: currentMusic?.title });
     currentMusic = null;
-    if (currentUser?.memberName) {
-        memberUserData[currentUser.memberName] = Object.assign({}, memberUserData[currentUser.memberName] || {}, {
-            music: { playing: false }
-        });
-        renderHeroProfiles();
-    }
     updateMusicUI();
     renderPlaylist();
     toast('⏹ Music stopped');
@@ -1143,30 +1171,6 @@ function stopMusicSilent() {
         try { ytPlayer.stopVideo(); } catch {}
     }
     currentMusic = null;
-}
-
-async function setMusicPlaying(playing) {
-    if (!firebaseUser || !currentUser) return;
-    try {
-        if (currentMusic) {
-            await db.ref('users/' + firebaseUser.uid + '/music').update({
-                videoId: currentMusic.videoId,
-                title: currentMusic.title,
-                playing: playing,
-                updatedAt: Date.now()
-            });
-            await syncPublicProfile(currentUser.memberName, {
-                music: {
-                    videoId: currentMusic.videoId,
-                    title: currentMusic.title,
-                    playing: playing
-                }
-            });
-        } else if (!playing) {
-            await db.ref('users/' + firebaseUser.uid + '/music/playing').set(false);
-            await syncPublicProfile(currentUser.memberName, { music: { playing: false } });
-        }
-    } catch (err) { console.error('setMusicPlaying error:', err); }
 }
 
 function updateMusicUI() {
@@ -1570,13 +1574,14 @@ $('musicModal')?.addEventListener('click', (e) => { if (e.target.id === 'musicMo
 (function init() {
     initTheme();
     renderThemes();
-    renderCategories();       // ← ✅ ახლა ჩანს categories
+    renderCategories();
     renderGames();
     renderComingSoon();
     renderRecentlyViewed();
     initLiveStats();
     listenMemberSlots();
-    listenPublicProfiles();   // everyone sees public data
+    listenPublicProfiles();
+    listenNowPlaying();       // 🎵 uid-based music
     listenRecommendation();
     updateAuthUI();
     renderPlaylist();
