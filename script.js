@@ -1,5 +1,6 @@
 /* ================================================================
-   MISSION: PLAY — script.js (FINAL)
+   MISSION: PLAY — script.js
+   + Photo Mode + Now Playing Game
    ================================================================ */
 
 const firebaseConfig = {
@@ -28,6 +29,7 @@ let firebaseUser = null;
 let memberSlots = {};
 let memberUserData = {};
 let nowPlayingByMember = {};
+let nowPlayingGameByMember = {};
 let selectedMember = null;
 let currentFilter = null;
 let previewFrame = 'gold';
@@ -39,11 +41,33 @@ let ytPlayerReady = false;
 let ytApiLoading = false;
 let currentMusic = null;
 
+// Photo Mode state
+let photoOptions = {
+    showMusic: true,
+    showGames: true,
+    showBadges: true,
+    bg: 'gold',
+    caption: '',
+    siteLink: 'mission-play.netlify.app',
+    featuredGame: 'auto'
+};
+
+const PHOTO_BACKGROUNDS = [
+    { id: 'gold', name: 'Royal Gold', css: 'linear-gradient(135deg, #0a0a14 0%, #1a1220 50%, #2a1a10 100%)' },
+    { id: 'neon', name: 'Cyber Neon', css: 'linear-gradient(135deg, #050510 0%, #0d0a2a 50%, #1a0a30 100%)' },
+    { id: 'blood', name: 'Blood Moon', css: 'linear-gradient(135deg, #0a0303 0%, #1a0505 50%, #2a0808 100%)' },
+    { id: 'emerald', name: 'Emerald', css: 'linear-gradient(135deg, #040a06 0%, #0a1a10 50%, #0d2a1a 100%)' },
+    { id: 'ocean', name: 'Deep Ocean', css: 'linear-gradient(135deg, #030814 0%, #061428 50%, #0a2040 100%)' },
+    { id: 'sakura', name: 'Sakura', css: 'linear-gradient(135deg, #0a040a 0%, #1a0a15 50%, #2a0a20 100%)' },
+    { id: 'void', name: 'Void', css: 'linear-gradient(135deg, #000000 0%, #0a0a0a 50%, #151515 100%)' },
+    { id: 'sunset', name: 'Sunset', css: 'linear-gradient(135deg, #0a0410 0%, #200820 50%, #3a0a20 100%)' }
+];
+
 const gamesData = [
-    { id: 1, title: 'DayZ', genre: 'Survival', desc: 'Fight to survive in a cannibal-infested forest. Build, craft, and defend yourself against terrifying mutants.', rating: '9.9', downloads: '2.1M', image: 'https://cdn.cloudflare.steamstatic.com/steam/apps/221100/header.jpg', link: 'https://dayzavr.ru/download.html', badge: '🔥 Hot', category: 'survival' },
-    { id: 2, title: 'Funnel Runners', genre: 'Survival', desc: 'Trapped in a doomed city, you and up to 7 friends must scavenge parts, fix your van, and escape the brutal tornado.', rating: '7.6', downloads: '25.8k', image: 'https://steamrip.com/wp-content/uploads/2024/08/Funnel-Runners.jpg', link: 'https://steamrip.com/funnel-runners-free-download/', badge: 'Online Soon', category: 'survival' },
-    { id: 3, title: 'Sons Of The Forest', genre: 'Horror / Survival', desc: 'Fight to survive in a cannibal-infested forest. Build, craft, and defend yourself against terrifying mutants.', rating: '9.4', downloads: '2.1M', image: 'https://wallpapercave.com/wp/wp12152116.jpg', link: 'https://gtorr.net/index.php?newsid=3928', badge: '🔥 Hot', category: 'survival' },
-    { id: 4, title: 'Backrooms: Escape Together', genre: 'Horror', desc: 'Survive in infinite levels of Backroom.', rating: '9.1', downloads: '1.2M', image: 'https://cdn.akamai.steamstatic.com/steam/apps/2141730/ss_7e94b69940005e3ba12c63d6ccc56386ff9141a9.jpg?t=1668069333', link: 'https://gtorr.net/index.php?newsid=3818', badge: '🆕 New', category: 'horror' },
+    { id: 1, title: 'DayZ', genre: 'Survival', desc: 'Fight to survive in a cannibal-infested forest.', rating: '9.9', downloads: '2.1M', image: 'https://cdn.cloudflare.steamstatic.com/steam/apps/221100/header.jpg', link: 'https://dayzavr.ru/download.html', badge: '🔥 Hot', category: 'survival' },
+    { id: 2, title: 'Funnel Runners', genre: 'Survival', desc: 'Trapped in a doomed city.', rating: '7.6', downloads: '25.8k', image: 'https://steamrip.com/wp-content/uploads/2024/08/Funnel-Runners.jpg', link: 'https://steamrip.com/funnel-runners-free-download/', badge: 'Online Soon', category: 'survival' },
+    { id: 3, title: 'Sons Of The Forest', genre: 'Horror / Survival', desc: 'Fight to survive in a forest.', rating: '9.4', downloads: '2.1M', image: 'https://wallpapercave.com/wp/wp12152116.jpg', link: 'https://gtorr.net/index.php?newsid=3928', badge: '🔥 Hot', category: 'survival' },
+    { id: 4, title: 'Backrooms: Escape Together', genre: 'Horror', desc: 'Survive in Backroom.', rating: '9.1', downloads: '1.2M', image: 'https://cdn.akamai.steamstatic.com/steam/apps/2141730/ss_7e94b69940005e3ba12c63d6ccc56386ff9141a9.jpg?t=1668069333', link: 'https://gtorr.net/index.php?newsid=3818', badge: '🆕 New', category: 'horror' },
     { id: 5, title: 'Shift At Midnight', genre: 'Horror', desc: 'Survive in store.', rating: '9.1', downloads: '1.2M', image: 'https://gtorr.net/uploads/posts/2026-08/1787854284_library_capsule.jpg', link: 'https://gtorr.net/index.php?newsid=5283', badge: '🆕 New', category: 'horror' },
     { id: 6, title: 'WE ARE SO DEAD', genre: 'Horror', desc: 'Co-op horror game.', rating: '7.0', downloads: '388K', image: 'https://steamrip.com/wp-content/uploads/2026/08/WE_ARE_SO_DEAD_featured_steamrip.jpg', link: 'https://steamrip.com/we-are-so-dead-free-download/', badge: '🆕 New', category: 'horror' },
     { id: 7, title: 'Long Drive North', genre: 'Survival', desc: 'Co-op funny survival game.', rating: '5.0', downloads: '15K', image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRDtOIEeDO-siGUTHup29dTsQxNEQ5B8Eth38yQAo5ppQiK0T7igUcZKH_rSK-iArOV_5dQK-syo96vKw0WtdSj9TkhqwLD94tPmhTNbjqG3w&s=10', link: 'https://drive.google.com/drive/folders/1CmEXv0uRAkEzfo1Nxjj6fW7L4UjlifNU?usp=sharing', badge: '🆕 New', category: 'horror' }
@@ -106,14 +130,13 @@ async function silentMigrate() {
     } catch (e) { console.warn('Migration:', e.message); }
 }
 
-/* ============ PUBLIC PROFILE SYNC ============ */
 async function syncPublicProfile(memberName, data) {
     if (!memberName) return;
     try { await db.ref('publicProfiles/' + memberName).update(data); }
     catch (err) { console.warn('syncPublicProfile:', err.message); }
 }
 
-/* ============ NOW PLAYING ============ */
+/* ============ NOW PLAYING (music) ============ */
 function listenNowPlaying() {
     db.ref('nowPlaying').on('value', snap => {
         const np = snap.val() || {};
@@ -138,12 +161,52 @@ async function setNowPlaying(data) {
             playing: data?.playing === true,
             updatedAt: Date.now()
         };
-        await db.ref('nowPlaying/' + firebaseUser.uid).set(payload).catch(e => console.warn(e.message));
-        await db.ref('publicProfiles/' + currentUser.memberName + '/music').set(payload).catch(e => console.warn(e.message));
+        await db.ref('nowPlaying/' + firebaseUser.uid).set(payload).catch(() => {});
+        await db.ref('publicProfiles/' + currentUser.memberName + '/music').set(payload).catch(() => {});
         if (payload.playing && payload.title) nowPlayingByMember[currentUser.memberName] = payload;
         else delete nowPlayingByMember[currentUser.memberName];
         renderHeroProfiles();
     } catch (err) { console.warn('setNowPlaying:', err.message); }
+}
+
+/* ============ NOW PLAYING GAME ============ */
+function listenNowPlayingGame() {
+    db.ref('nowPlayingGame').on('value', snap => {
+        const np = snap.val() || {};
+        nowPlayingGameByMember = {};
+        for (const uid in np) {
+            const data = np[uid];
+            if (data && data.memberName && data.gameTitle) {
+                nowPlayingGameByMember[data.memberName] = data;
+            }
+        }
+        renderHeroProfiles();
+    }, () => {});
+}
+
+async function setNowPlayingGame(gameId) {
+    if (!firebaseUser || !currentUser) return;
+    try {
+        if (!gameId) {
+            await db.ref('nowPlayingGame/' + firebaseUser.uid).remove();
+            await db.ref('publicProfiles/' + currentUser.memberName + '/game').remove().catch(() => {});
+            delete nowPlayingGameByMember[currentUser.memberName];
+        } else {
+            const g = gamesData.find(x => x.id === parseInt(gameId));
+            if (!g) return;
+            const payload = {
+                memberName: currentUser.memberName,
+                gameId: g.id,
+                gameTitle: g.title,
+                gameImage: g.image,
+                updatedAt: Date.now()
+            };
+            await db.ref('nowPlayingGame/' + firebaseUser.uid).set(payload);
+            await db.ref('publicProfiles/' + currentUser.memberName + '/game').set(payload).catch(() => {});
+            nowPlayingGameByMember[currentUser.memberName] = payload;
+        }
+        renderHeroProfiles();
+    } catch (err) { console.warn('setNowPlayingGame:', err.message); }
 }
 
 /* ============ THEME ============ */
@@ -262,6 +325,13 @@ function renderHeroProfiles() {
                 <span class="music-title">${escapeHtml(music.title)}</span>
             </div>` : '';
 
+        const game = nowPlayingGameByMember[m.name];
+        const gameBadge = game?.gameTitle ? `
+            <div class="profile-game" title="${escapeHtml(game.gameTitle)}">
+                <span>🎮</span>
+                <span class="game-title">${escapeHtml(game.gameTitle)}</span>
+            </div>` : '';
+
         return `
             <div class="profile-card ${isAdmin ? 'is-admin' : ''}">
                 <div class="avatar-wrapper" data-frame="${frame}" data-anim="${anim}">
@@ -272,9 +342,197 @@ function renderHeroProfiles() {
                 ${isAdmin ? '<span class="developer-badge">👑 Developer</span>' : ''}
                 ${isClaimed ? '<span class="claimed-badge">✓ Registered</span>' : '<span class="claimed-badge">Available</span>'}
                 ${musicBadge}
+                ${gameBadge}
             </div>`;
     }).join('');
 }
+
+/* ============ PHOTO MODE (Landscape 16:9) ============ */
+function openPhotoMode() {
+    $('photoModeOverlay').classList.add('active');
+    document.body.style.overflow = 'hidden';
+    renderPhotoBgGrid();
+    populatePhotoFeaturedGame();
+    updatePhotoScale();
+    renderPhotoPreview();
+}
+function closePhotoMode() {
+    $('photoModeOverlay').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+function updatePhotoScale() {
+    const scaler = $('photoPreviewScaler');
+    const preview = $('photoPreview');
+    if (!scaler || !preview) return;
+    const scale = scaler.clientWidth / 800;
+    preview.style.transform = `scale(${scale})`;
+}
+window.addEventListener('resize', () => {
+    if ($('photoModeOverlay')?.classList.contains('active')) updatePhotoScale();
+});
+
+function renderPhotoBgGrid() {
+    const grid = $('photoBgGrid'); if (!grid) return;
+    grid.innerHTML = PHOTO_BACKGROUNDS.map(bg => `
+        <button class="photo-bg-btn ${bg.id === photoOptions.bg ? 'active' : ''}" data-bg="${bg.id}" style="background:${bg.css}">
+            <span class="check">✓</span>
+        </button>`).join('');
+    grid.querySelectorAll('.photo-bg-btn').forEach(btn => btn.addEventListener('click', () => {
+        photoOptions.bg = btn.dataset.bg;
+        grid.querySelectorAll('.photo-bg-btn').forEach(b => b.classList.toggle('active', b.dataset.bg === photoOptions.bg));
+        renderPhotoPreview();
+    }));
+}
+
+function populatePhotoFeaturedGame() {
+    const select = $('photoFeaturedGame'); if (!select) return;
+    select.innerHTML = `
+        <option value="">— None (hide) —</option>
+        <option value="auto">🎯 Auto (each member's own game)</option>
+        ${gamesData.map(g => `<option value="${g.id}">${g.title}</option>`).join('')}
+    `;
+    select.value = photoOptions.featuredGame || 'auto';
+}
+
+function renderPhotoPreview() {
+    const preview = $('photoPreview'); if (!preview) return;
+    const bg = PHOTO_BACKGROUNDS.find(b => b.id === photoOptions.bg) || PHOTO_BACKGROUNDS[0];
+    const title = photoOptions.caption || 'Our Gaming Squad';
+
+    // Featured game
+    let featuredGameHtml = '';
+    if (photoOptions.featuredGame && photoOptions.featuredGame !== 'auto' && photoOptions.featuredGame !== '') {
+        const g = gamesData.find(x => x.id === parseInt(photoOptions.featuredGame));
+        if (g) {
+            featuredGameHtml = `
+                <div class="pp-featured-game">
+                    <span class="label">🎮 Now Playing</span>
+                    <span class="game-name">${escapeHtml(g.title)}</span>
+                </div>`;
+        }
+    } else if (photoOptions.featuredGame === 'auto') {
+        const games = MEMBERS.map(m => nowPlayingGameByMember[m.name]?.gameTitle).filter(Boolean);
+        const unique = [...new Set(games)];
+        if (unique.length) {
+            featuredGameHtml = `
+                <div class="pp-featured-game">
+                    <span class="label">🎮 Now Playing</span>
+                    <span class="game-name">${unique.map(escapeHtml).join(' • ')}</span>
+                </div>`;
+        }
+    }
+
+    const membersHtml = MEMBERS.map(m => {
+        const isAdmin = m.name === 'KEROSENE';
+        const userData = memberUserData[m.name];
+        const nickname = userData?.nickname || m.name;
+        const avatar = userData?.avatar || m.avatar;
+        const frame = userData?.frame || (isAdmin ? 'royal' : 'gold');
+        const isClaimed = !!memberSlots[m.name];
+        const music = nowPlayingByMember[m.name];
+        const game = nowPlayingGameByMember[m.name];
+
+        const badges = [];
+        if (photoOptions.showMusic && music?.title && music?.playing) {
+            const t = music.title.length > 20 ? music.title.substring(0, 20) + '…' : music.title;
+            badges.push(`<span class="pp-pill music">🎵 ${escapeHtml(t)}</span>`);
+        }
+        if (photoOptions.showGames && game?.gameTitle) {
+            const t = game.gameTitle.length > 20 ? game.gameTitle.substring(0, 20) + '…' : game.gameTitle;
+            badges.push(`<span class="pp-pill game">🎮 ${escapeHtml(t)}</span>`);
+        }
+        if (photoOptions.showBadges && isClaimed) {
+            badges.push(`<span class="pp-pill registered">✓ Registered</span>`);
+        }
+
+        const frameClass = 'pp-frame-' + (['gold','royal','neon','fire','ice','hacker','rainbow','legendary'].includes(frame) ? frame : 'none');
+
+        return `
+            <div class="pp-member ${isAdmin ? 'is-admin' : ''}">
+                <div class="pp-avatar-wrap">
+                    <div class="pp-frame ${frameClass}"></div>
+                    <img src="${avatar}" alt="${escapeHtml(m.name)}" onerror="this.src='${defaultAvatar(m.name)}'" crossorigin="anonymous">
+                </div>
+                <div class="pp-name">
+                    ${escapeHtml(nickname)}
+                    ${isAdmin ? '<span class="crown">👑</span>' : ''}
+                </div>
+                <div class="pp-role">${escapeHtml(m.role)}</div>
+                ${badges.length ? `<div class="pp-badges">${badges.join('')}</div>` : ''}
+            </div>`;
+    }).join('');
+
+    preview.innerHTML = `
+        <div class="pp-bg" style="background:${bg.css}"></div>
+        <div class="pp-content">
+            <div class="pp-header">
+                <div class="pp-logo">
+                    <span class="pp-logo-icon">🎯</span>
+                    <span>Mission<span class="gold">Play</span></span>
+                </div>
+                <div class="pp-badge-top">🏆 Gaming Hub 2026</div>
+            </div>
+
+            <div class="pp-title">${escapeHtml(title)}</div>
+
+            <div class="pp-members">${membersHtml}</div>
+
+            ${featuredGameHtml}
+
+            <div class="pp-footer">
+                <div class="pp-site">
+                    <span class="icon">🌐</span>
+                    <span>${escapeHtml(photoOptions.siteLink || 'mission-play.netlify.app')}</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+async function downloadPhoto() {
+    const preview = $('photoPreview');
+    if (!preview) return;
+    const btn = $('photoDownloadBtn');
+    const origText = btn.textContent;
+    btn.textContent = '⏳ Generating...';
+    btn.disabled = true;
+
+    // Clone off-screen for high-res capture
+    const clone = preview.cloneNode(true);
+    clone.style.transform = 'none';
+    clone.style.position = 'fixed';
+    clone.style.left = '-99999px';
+    clone.style.top = '0';
+    clone.style.width = '800px';
+    clone.style.height = '450px';
+    document.body.appendChild(clone);
+
+    try {
+        const canvas = await html2canvas(clone, {
+            scale: 2,
+            backgroundColor: '#06060a',
+            useCORS: true,
+            allowTaint: true,
+            logging: false,
+            width: 800,
+            height: 450
+        });
+        const link = document.createElement('a');
+        link.download = `mission-play-${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        toast('✅ Downloaded! 1600×900', 'success');
+    } catch (err) {
+        console.error('Download error:', err);
+        toast('❌ ' + err.message, 'error');
+    } finally {
+        document.body.removeChild(clone);
+        btn.textContent = origText;
+        btn.disabled = false;
+    }
+}
+
 
 /* ============ RECOMMENDATION ============ */
 function listenRecommendation() {
@@ -306,6 +564,12 @@ function populateRecommendSelect() {
     const select = $('recommendGameSelect'); if (!select) return;
     select.innerHTML = '<option value="">— აირჩიე თამაში —</option>' + gamesData.map(g => `<option value="${g.id}">${g.title} (${g.genre})</option>`).join('');
     if (recommendation?.gameId) select.value = recommendation.gameId;
+}
+function populateGameSelect() {
+    const select = $('gameSelect'); if (!select) return;
+    const current = currentUser?.memberName ? nowPlayingGameByMember[currentUser.memberName]?.gameId : null;
+    select.innerHTML = '<option value="">— None (clear) —</option>' + gamesData.map(g => `<option value="${g.id}">${g.title}</option>`).join('');
+    if (current) select.value = current;
 }
 
 /* ============ AUTH MODAL ============ */
@@ -389,36 +653,22 @@ $('loginForm')?.addEventListener('submit', async (e) => {
     } catch (err) { errEl.textContent = '❌ ' + (err.message || 'Login failed'); }
 });
 
-/* ============ GOOGLE AUTH (POPUP) ============ */
+/* ============ GOOGLE AUTH ============ */
 async function googleAuth(isRegister) {
     const errEl = isRegister ? $('registerError') : $('loginError');
     if (errEl) { errEl.textContent = ''; errEl.className = 'auth-error'; }
-
     if (isRegister) {
-        if (!selectedMember) {
-            if (errEl) errEl.textContent = '⚠️ ჯერ აირჩიე ვინ ხარ';
-            toast('⚠️ ჯერ აირჩიე ვინ ხარ', 'error');
-            return;
-        }
-        if (memberSlots[selectedMember]) {
-            if (errEl) errEl.textContent = '🔒 ეს წევრი უკვე დაკავებულია';
-            toast('🔒 ეს წევრი უკვე დაკავებულია', 'error');
-            return;
-        }
+        if (!selectedMember) { if (errEl) errEl.textContent = '⚠️ ჯერ აირჩიე ვინ ხარ'; return; }
+        if (memberSlots[selectedMember]) { if (errEl) errEl.textContent = '🔒 უკვე დაკავებულია'; return; }
     }
-
     let result = null;
-    try {
-        console.log('🚀 Google popup starting...');
-        result = await auth.signInWithPopup(googleProvider);
-        console.log('✅ Popup success:', result.user.uid);
-    } catch (err) {
-        console.error('❌ Popup error:', err.code, err.message);
+    try { result = await auth.signInWithPopup(googleProvider); }
+    catch (err) {
+        console.error('Popup error:', err.code, err.message);
         if (errEl) errEl.textContent = '❌ ' + (err.message || 'Google failed');
         toast('❌ ' + (err.message || 'Google failed'), 'error');
         return;
     }
-
     await handleGoogleResult(result.user, isRegister, selectedMember);
 }
 $('googleLoginBtn')?.addEventListener('click', () => googleAuth(false));
@@ -426,48 +676,19 @@ $('googleRegisterBtn')?.addEventListener('click', () => googleAuth(true));
 
 async function handleGoogleResult(user, isRegister, pendingMember) {
     const errEl = isRegister ? $('registerError') : $('loginError');
-    const uid = user.uid;
-    const email = user.email;
-
     try {
-        const snap = await db.ref('users/' + uid).once('value');
-        if (snap.exists()) {
-            console.log('✅ Existing user');
-            toast('✅ Welcome back!', 'success');
-            closeAuthModal();
-            return;
-        }
-
-        if (!isRegister || !pendingMember) {
-            console.log('⚠️ No register context, sign out');
-            await auth.signOut();
-            if (errEl) errEl.textContent = '⚠️ გამოიყენე Register ტაბი';
-            return;
-        }
-
-        if (memberSlots[pendingMember]) {
-            await auth.signOut();
-            if (errEl) errEl.textContent = '🔒 წევრი უკვე დაკავებულია';
-            toast('🔒 წევრი დაკავებულია', 'error');
-            return;
-        }
-
-        console.log('🎯 Claiming:', pendingMember);
-        const claimed = await claimMemberSlot(pendingMember, uid);
-        if (!claimed) {
-            await auth.signOut();
-            if (errEl) errEl.textContent = '🔒 Claim failed';
-            return;
-        }
-
+        const snap = await db.ref('users/' + user.uid).once('value');
+        if (snap.exists()) { toast('✅ Welcome back!', 'success'); closeAuthModal(); return; }
+        if (!isRegister || !pendingMember) { await auth.signOut(); if (errEl) errEl.textContent = '⚠️ გამოიყენე Register ტაბი'; return; }
+        if (memberSlots[pendingMember]) { await auth.signOut(); if (errEl) errEl.textContent = '🔒 წევრი დაკავებულია'; return; }
+        const claimed = await claimMemberSlot(pendingMember, user.uid);
+        if (!claimed) { await auth.signOut(); if (errEl) errEl.textContent = '🔒 Claim failed'; return; }
         const role = pendingMember === 'KEROSENE' ? 'admin' : 'member';
         const memberInfo = MEMBERS.find(m => m.name === pendingMember);
         const initialAvatar = user.photoURL || memberInfo.avatar;
         const initialNick = user.displayName || pendingMember;
-
-        console.log('💾 Saving...');
-        await saveUserRecord(uid, {
-            email, memberName: pendingMember, nickname: initialNick,
+        await saveUserRecord(user.uid, {
+            email: user.email, memberName: pendingMember, nickname: initialNick,
             avatar: initialAvatar, frame: role === 'admin' ? 'royal' : 'gold',
             frameAnimation: role === 'admin' ? 'glow' : 'none',
             theme: localStorage.getItem('mp-theme') || 'royal-gold', role, createdAt: Date.now()
@@ -477,12 +698,10 @@ async function handleGoogleResult(user, isRegister, pendingMember) {
             frame: role === 'admin' ? 'royal' : 'gold',
             frameAnimation: role === 'admin' ? 'glow' : 'none', role
         });
-
-        console.log('🎉 Registration complete!');
         toast('🎉 Welcome, ' + pendingMember + '!', 'success');
         closeAuthModal();
     } catch (dbErr) {
-        console.error('❌ handle error:', dbErr);
+        console.error('handle error:', dbErr);
         await db.ref('memberSlots/' + pendingMember).remove().catch(() => {});
         await auth.signOut().catch(() => {});
         if (errEl) errEl.textContent = '❌ ' + dbErr.message;
@@ -501,8 +720,10 @@ auth.onAuthStateChanged(async (user) => {
             updateAuthUI();
             db.ref('users/' + user.uid + '/music/playing').onDisconnect().set(false);
             db.ref('nowPlaying/' + user.uid).onDisconnect().remove().catch(() => {});
+            db.ref('nowPlayingGame/' + user.uid).onDisconnect().remove().catch(() => {});
             listenPlaylist();
             listenUsers();
+            populateGameSelect();
             if (currentUser.music?.videoId) {
                 currentMusic = { videoId: currentUser.music.videoId, title: currentUser.music.title || '🎵 Track' };
             }
@@ -518,7 +739,6 @@ auth.onAuthStateChanged(async (user) => {
     }
 });
 
-/* ============ UPDATE UI ============ */
 function updateAuthUI() {
     const authBtn = $('authBtn'), profileBtn = $('profileNavBtn'), mobileLink = $('mobileAuthLink');
     if (firebaseUser && currentUser) {
@@ -543,6 +763,7 @@ function openProfileModal() {
     if (!currentUser) return;
     $('profileModal').classList.add('active');
     fillProfileForm(); renderFramesGrid(); renderAnimationsGrid(); updateProfileHeader();
+    populateGameSelect();
     const adminTab = $('adminTab');
     if (currentUser.role === 'admin') { adminTab.style.display = 'block'; loadAdminUsers(); populateRecommendSelect(); }
     else adminTab.style.display = 'none';
@@ -551,7 +772,7 @@ function openProfileModal() {
 function closeProfileModal() { $('profileModal').classList.remove('active'); }
 function switchProfileTab(tab) {
     document.querySelectorAll('.profile-tab').forEach(t => t.classList.toggle('active', t.dataset.ptab === tab));
-    ['edit', 'frames', 'admin'].forEach(t => { const el = $('ptab-' + t); if (el) el.style.display = t === tab ? 'flex' : 'none'; });
+    ['edit', 'activity', 'frames', 'admin'].forEach(t => { const el = $('ptab-' + t); if (el) el.style.display = t === tab ? 'flex' : 'none'; });
 }
 document.querySelectorAll('.profile-tab').forEach(tab => tab.addEventListener('click', () => switchProfileTab(tab.dataset.ptab)));
 
@@ -585,7 +806,7 @@ $('saveProfileBtn')?.addEventListener('click', async () => {
     let avatar = currentUser.avatar;
     if (fileInput.files && fileInput.files[0]) {
         const file = fileInput.files[0];
-        if (file.size > 2 * 1024 * 1024) { msg.textContent = '⚠️ Image too large (max 2MB)'; return; }
+        if (file.size > 2 * 1024 * 1024) { msg.textContent = '⚠️ Image too large'; return; }
         avatar = await fileToBase64(file);
     } else if (avatarUrl) { avatar = avatarUrl; }
     try {
@@ -601,7 +822,7 @@ $('saveProfileBtn')?.addEventListener('click', async () => {
 $('useDiscordAvatarBtn')?.addEventListener('click', async () => {
     if (!currentUser || !firebaseUser) return;
     const memberInfo = MEMBERS.find(m => m.name === currentUser.memberName);
-    if (!memberInfo) { toast('❌ Member not found', 'error'); return; }
+    if (!memberInfo) return;
     try {
         await db.ref('users/' + firebaseUser.uid).update({ avatar: memberInfo.avatar });
         await syncPublicProfile(currentUser.memberName, { avatar: memberInfo.avatar });
@@ -610,6 +831,19 @@ $('useDiscordAvatarBtn')?.addEventListener('click', async () => {
         updateProfileHeader(); updateAuthUI();
         toast('💬 Discord avatar set!', 'success');
     } catch (err) { toast('❌ ' + err.message, 'error'); }
+});
+
+/* Game select */
+$('setGameBtn')?.addEventListener('click', async () => {
+    const gameId = $('gameSelect').value;
+    if (!gameId) { toast('⚠️ აირჩიე თამაში', 'error'); return; }
+    await setNowPlayingGame(gameId);
+    const g = gamesData.find(x => x.id === parseInt(gameId));
+    toast('🎮 ' + (g?.title || 'Game') + ' set!', 'success');
+});
+$('clearGameBtn')?.addEventListener('click', async () => {
+    await setNowPlayingGame(null);
+    toast('🗑 Game status cleared', 'success');
 });
 
 function fileToBase64(file) {
@@ -661,13 +895,14 @@ $('logoutBtn')?.addEventListener('click', async () => {
     if (firebaseUser) {
         await db.ref('users/' + firebaseUser.uid + '/music/playing').set(false).catch(() => {});
         await db.ref('nowPlaying/' + firebaseUser.uid).remove().catch(() => {});
+        await db.ref('nowPlayingGame/' + firebaseUser.uid).remove().catch(() => {});
     }
     await auth.signOut();
     closeProfileModal(); stopMusicSilent();
     toast('👋 Signed out');
 });
 
-/* ============ ADMIN PANEL ============ */
+/* ============ ADMIN ============ */
 async function loadAdminUsers() {
     const list = $('adminUsersList'); if (!list) return;
     try {
@@ -692,6 +927,7 @@ async function loadAdminUsers() {
                 await db.ref('users/' + btn.dataset.uid).remove();
                 await db.ref('publicProfiles/' + btn.dataset.member).remove().catch(() => {});
                 await db.ref('nowPlaying/' + btn.dataset.uid).remove().catch(() => {});
+                await db.ref('nowPlayingGame/' + btn.dataset.uid).remove().catch(() => {});
                 toast('🔄 Released', 'success'); loadAdminUsers();
             } catch (err) { toast('❌ ' + err.message, 'error'); }
         }));
@@ -707,11 +943,11 @@ $('resetAllSlotsBtn')?.addEventListener('click', async () => {
 $('setRecommendationBtn')?.addEventListener('click', async () => {
     if (!currentUser || currentUser.role !== 'admin') return;
     const gameId = parseInt($('recommendGameSelect').value);
-    if (!gameId) { toast('⚠️ აირჩიე თამაში', 'error'); return; }
+    if (!gameId) { toast('⚠️ აირჩიე', 'error'); return; }
     const g = gamesData.find(x => x.id === gameId); if (!g) return;
     try {
         await db.ref('recommendation').set({ gameId: g.id, gameTitle: g.title, recommendedBy: currentUser.nickname || 'Admin', timestamp: Date.now() });
-        toast('👑 Set: ' + g.title, 'success');
+        toast('👑 ' + g.title, 'success');
     } catch (err) { toast('❌ ' + err.message, 'error'); }
 });
 $('clearRecommendationBtn')?.addEventListener('click', async () => {
@@ -758,7 +994,6 @@ async function fetchYtTitle(videoId) {
         return (await res.json()).title || '🎵 Track';
     } catch { return '🎵 Track'; }
 }
-
 function listenPlaylist() {
     if (!firebaseUser) return;
     db.ref('users/' + firebaseUser.uid + '/playlist').on('value', snap => {
@@ -771,7 +1006,7 @@ function renderPlaylist() {
     if (!list) return;
     const entries = Object.entries(playlist);
     if (countEl) countEl.textContent = entries.length;
-    if (!entries.length) { list.innerHTML = '<div class="playlist-empty">ჯერ არაფერია შენახული — დაამატე ლინკი ⬆️</div>'; return; }
+    if (!entries.length) { list.innerHTML = '<div class="playlist-empty">ჯერ არაფერია — დაამატე ლინკი ⬆️</div>'; return; }
     entries.sort((a, b) => (b[1].addedAt || 0) - (a[1].addedAt || 0));
     list.innerHTML = entries.map(([vid, data], idx) => {
         const isActive = currentMusic?.videoId === vid;
@@ -799,7 +1034,7 @@ function renderPlaylist() {
     }));
 }
 async function addToPlaylist() {
-    if (!firebaseUser) { toast('⚠️ შედი ანგარიშზე', 'error'); return; }
+    if (!firebaseUser) { toast('⚠️ შედი', 'error'); return; }
     const url = $('ytLinkInput').value.trim();
     if (!url) { toast('⚠️ ჩაწერე ლინკი', 'error'); return; }
     const videoId = extractYtId(url);
@@ -825,7 +1060,7 @@ async function deleteFromPlaylist(videoId) {
 }
 async function playFromPlaylist(videoId) {
     if (!firebaseUser || !currentUser) return;
-    if (!ytPlayerReady) { toast('⏳ მოთამაშე იტვირთება...', 'error'); return; }
+    if (!ytPlayerReady) { toast('⏳ იტვირთება...', 'error'); return; }
     const data = playlist[videoId]; if (!data) return;
     try {
         ytPlayer.loadVideoById(videoId);
@@ -904,7 +1139,6 @@ function createCategoryCard(cat) {
     return `<div class="category-card" data-category="${cat.name}"><span class="cat-icon">${cat.icon}</span><h4>${cat.name}</h4></div>`;
 }
 function renderCategories() { if (categoriesGrid) categoriesGrid.innerHTML = categoriesData.map(createCategoryCard).join(''); }
-
 function renderGames(filter = null) {
     const filtered = filter ? gamesData.filter(g => g.category === filter) : gamesData;
     gamesGrid.innerHTML = filtered.map(createGameCard).join('');
@@ -925,7 +1159,6 @@ function renderGames(filter = null) {
 function renderComingSoon() { let h = ''; for (let i = 0; i < 3; i++) h += createComingSoonCard(); comingSoonGrid.innerHTML = h; }
 function setFilter(c) { if (currentFilter === c) clearFilter(); else { currentFilter = c; renderGames(c); } }
 function clearFilter() { currentFilter = null; renderGames(null); }
-
 categoriesGrid?.addEventListener('click', (e) => { const c = e.target.closest('.category-card'); if (c) setFilter(c.getAttribute('data-category')); });
 clearFilterBtn?.addEventListener('click', clearFilter);
 resetFilterBtn?.addEventListener('click', clearFilter);
@@ -970,7 +1203,7 @@ function openGameModal(id) {
 function closeGameModal() { $('gameModal').classList.remove('active'); document.body.style.overflow = ''; }
 $('gameModal')?.addEventListener('click', (e) => { if (e.target.id === 'gameModal') closeGameModal(); });
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { closeGameModal(); closeAuthModal(); closeProfileModal(); closeThemeModal(); closeMusicModal(); }
+    if (e.key === 'Escape') { closeGameModal(); closeAuthModal(); closeProfileModal(); closeThemeModal(); closeMusicModal(); closePhotoMode(); }
 });
 
 /* ============ RECENT ============ */
@@ -1081,7 +1314,6 @@ function animateParticles() {
     requestAnimationFrame(animateParticles);
 }
 
-/* ============ SMOOTH SCROLL ============ */
 document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', function (e) {
     const href = this.getAttribute('href'); if (href === '#') return;
     const target = document.querySelector(href);
@@ -1091,21 +1323,39 @@ document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click
 /* ============ EVENT LISTENERS ============ */
 $('themeBtn')?.addEventListener('click', openThemeModal);
 $('musicBtn')?.addEventListener('click', openMusicModal);
+$('photoModeBtn')?.addEventListener('click', openPhotoMode);
 $('authBtn')?.addEventListener('click', () => openAuthModal('login'));
 $('profileNavBtn')?.addEventListener('click', openProfileModal);
 $('addToPlaylistBtn')?.addEventListener('click', addToPlaylist);
 $('ytLinkInput')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addToPlaylist(); } });
 $('stopMusicBtn')?.addEventListener('click', stopMusic);
+$('photoDownloadBtn')?.addEventListener('click', downloadPhoto);
+
+// Photo mode option listeners
+$('photoShowMusic')?.addEventListener('change', (e) => { photoOptions.showMusic = e.target.checked; renderPhotoPreview(); });
+$('photoShowGames')?.addEventListener('change', (e) => { photoOptions.showGames = e.target.checked; renderPhotoPreview(); });
+$('photoShowBadges')?.addEventListener('change', (e) => { photoOptions.showBadges = e.target.checked; renderPhotoPreview(); });
+$('photoCaption')?.addEventListener('input', (e) => { photoOptions.caption = e.target.value; renderPhotoPreview(); });
+$('photoSiteLink')?.addEventListener('input', (e) => { photoOptions.siteLink = e.target.value || 'mission-play.netlify.app'; renderPhotoPreview(); });
+$('photoFeaturedGame')?.addEventListener('change', (e) => { photoOptions.featuredGame = e.target.value; renderPhotoPreview(); });
+
+document.querySelectorAll('.photo-layout-btn').forEach(btn => btn.addEventListener('click', () => {
+    photoOptions.layout = btn.dataset.layout;
+    document.querySelectorAll('.photo-layout-btn').forEach(b => b.classList.toggle('active', b.dataset.layout === photoOptions.layout));
+    renderPhotoPreview();
+}));
+
 $('authModal')?.addEventListener('click', (e) => { if (e.target.id === 'authModal') closeAuthModal(); });
 $('profileModal')?.addEventListener('click', (e) => { if (e.target.id === 'profileModal') closeProfileModal(); });
 $('themeModal')?.addEventListener('click', (e) => { if (e.target.id === 'themeModal') closeThemeModal(); });
 $('musicModal')?.addEventListener('click', (e) => { if (e.target.id === 'musicModal') closeMusicModal(); });
+$('photoModeOverlay')?.addEventListener('click', (e) => { if (e.target.id === 'photoModeOverlay') closePhotoMode(); });
 
 /* ============ INIT ============ */
 (function init() {
     initTheme(); renderThemes(); renderCategories(); renderGames(); renderComingSoon();
     renderRecentlyViewed(); initLiveStats();
-    listenMemberSlots(); listenPublicProfiles(); listenNowPlaying(); listenRecommendation();
+    listenMemberSlots(); listenPublicProfiles(); listenNowPlaying(); listenNowPlayingGame(); listenRecommendation();
     updateAuthUI(); renderPlaylist(); loadYouTubeAPI();
     if (canvas) {
         resizeCanvas(); window.addEventListener('resize', resizeCanvas);

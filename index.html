@@ -18,6 +18,7 @@
     <a href="#games" onclick="closeMenu()">🎮 Games</a>
     <a href="#categories" onclick="closeMenu()">📂 Categories</a>
     <a href="#community" onclick="closeMenu()">💬 Community</a>
+    <a href="#" onclick="event.preventDefault(); openPhotoMode(); closeMenu();">📸 Photo Mode</a>
     <a href="#" onclick="event.preventDefault(); openProfileOrAuth(); closeMenu();" id="mobileAuthLink">👤 Sign In</a>
 </div>
 
@@ -33,6 +34,7 @@
             <li><a href="#community">Community</a></li>
         </ul>
         <div class="nav-actions">
+            <button class="theme-btn" id="photoModeBtn" title="Photo Mode">📸</button>
             <button class="theme-btn" id="musicBtn" title="Music">🎵</button>
             <button class="theme-btn" id="themeBtn" title="Change Theme">🎨</button>
             <button class="btn-nav" id="authBtn">👤 Sign In</button>
@@ -57,6 +59,7 @@
             <div class="hero-buttons">
                 <a href="#games" class="btn-primary">🎮 Browse Games</a>
                 <a href="#categories" class="btn-secondary">📂 Categories</a>
+                <button class="btn-secondary" onclick="openPhotoMode()" style="margin-left:8px;">📸 Photo Mode</button>
             </div>
         </div>
     </section>
@@ -222,6 +225,7 @@
 
         <div class="profile-tabs">
             <button class="profile-tab active" data-ptab="edit">✏️ Edit Profile</button>
+            <button class="profile-tab" data-ptab="activity">🎮 Activity</button>
             <button class="profile-tab" data-ptab="frames">🖼 Frames</button>
             <button class="profile-tab" data-ptab="admin" id="adminTab" style="display:none;">👑 Admin</button>
         </div>
@@ -244,6 +248,20 @@
             </button>
             <button class="btn-primary full-width" id="saveProfileBtn">💾 Save Changes</button>
             <p class="auth-error" id="profileSaveMsg"></p>
+        </div>
+
+        <div class="profile-tab-content" id="ptab-activity" style="display:none;">
+            <h4>🎮 What are you playing?</h4>
+            <div class="input-group">
+                <select id="gameSelect">
+                    <option value="">— None (clear) —</option>
+                </select>
+            </div>
+            <button class="btn-primary full-width" id="setGameBtn">🎮 Set as Playing</button>
+            <button class="btn-secondary full-width" id="clearGameBtn" style="margin-top:10px;">🗑 Clear Game Status</button>
+            <p class="dim small" style="text-align:center; margin-top:14px;">
+                🎯 სხვები ხედავენ რა თამაშს თამაშობ — Photo Mode-შიც გამოჩნდება
+            </p>
         </div>
 
         <div class="profile-tab-content" id="ptab-frames" style="display:none;">
@@ -332,11 +350,74 @@
     </div>
 </div>
 
+<!-- ===== PHOTO MODE ===== -->
+<div class="photo-mode-overlay" id="photoModeOverlay">
+    <div class="photo-mode-container">
+        <div class="photo-preview-wrap">
+            <div class="photo-preview-scaler" id="photoPreviewScaler">
+                <div class="photo-preview" id="photoPreview"></div>
+            </div>
+            <p class="photo-hint">💡 16:9 • 1600×900 — Discord, Twitter, IG Post</p>
+        </div>
+
+        <div class="photo-controls">
+            <button class="modal-close" onclick="closePhotoMode()">✕</button>
+            <div class="photo-controls-header">
+                <div class="photo-mode-label">📸 PHOTO MODE</div>
+                <h3>Banner</h3>
+                <p class="dim small">მოამზადე სქრინი სოც. ქსელებისთვის</p>
+            </div>
+
+            <div class="photo-options">
+                <div class="photo-option-group">
+                    <label class="photo-option-label">🎮 Featured Game (bottom)</label>
+                    <select id="photoFeaturedGame"></select>
+                </div>
+
+                <div class="photo-option-group">
+                    <label class="photo-toggle">
+                        <input type="checkbox" id="photoShowMusic" checked>
+                        <span>🎵 Show Music</span>
+                    </label>
+                    <label class="photo-toggle">
+                        <input type="checkbox" id="photoShowGames" checked>
+                        <span>🎮 Show Games</span>
+                    </label>
+                    <label class="photo-toggle">
+                        <input type="checkbox" id="photoShowBadges" checked>
+                        <span>✓ Show Registered</span>
+                    </label>
+                </div>
+
+                <div class="photo-option-group">
+                    <label class="photo-option-label">🎨 Background</label>
+                    <div class="photo-bg-grid" id="photoBgGrid"></div>
+                </div>
+
+                <div class="photo-option-group">
+                    <label class="photo-option-label">💬 Title</label>
+                    <input type="text" id="photoCaption" maxlength="40" placeholder="Our Gaming Squad">
+                </div>
+
+                <div class="photo-option-group">
+                    <label class="photo-option-label">🔗 Site Link</label>
+                    <input type="text" id="photoSiteLink" maxlength="50" value="mission-play.netlify.app">
+                </div>
+            </div>
+
+            <button class="btn-primary full-width photo-download-btn" id="photoDownloadBtn">
+                ⬇️ Download PNG (1600×900)
+            </button>
+        </div>
+    </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
