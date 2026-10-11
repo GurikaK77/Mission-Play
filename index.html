@@ -216,6 +216,13 @@
             <div class="input-group"><label>🖼 Avatar URL</label><input type="text" id="editAvatarUrl" placeholder="https://..."></div>
             <div class="input-group"><label>📁 Or Upload Image</label><input type="file" id="editAvatarFile" accept="image/*"></div>
             <button class="btn-secondary full-width" id="useDiscordAvatarBtn" style="margin-top:-4px;">💬 Use Discord Avatar</button>
+
+            <!-- 👑 DEVELOPER TOGGLE -->
+            <label class="photo-toggle" id="editDevBadgeWrapper" style="margin-top:6px; display:none;">
+                <input type="checkbox" id="editShowDeveloper" checked>
+                <span>👑 Show DEVELOPER badge</span>
+            </label>
+
             <button class="btn-primary full-width" id="saveProfileBtn">💾 Save Changes</button>
             <p class="auth-error" id="profileSaveMsg"></p>
         </div>
@@ -291,21 +298,21 @@
     </div>
 </div>
 
-<!-- ===== PHOTO MODE ===== -->
+<!-- ===== PHOTO MODE (9:16 Vertical) ===== -->
 <div class="photo-mode-overlay" id="photoModeOverlay">
     <div class="photo-mode-container">
         <div class="photo-preview-wrap">
             <div class="photo-preview-scaler" id="photoPreviewScaler">
                 <div class="photo-preview" id="photoPreview"></div>
             </div>
-            <p class="photo-hint">💡 16:9 • 1600×900 — Discord, Twitter, IG Post</p>
+            <p class="photo-hint">📱 9:16 • 1080×1920 — Instagram / TikTok / Story</p>
         </div>
 
         <div class="photo-controls">
             <button class="modal-close" onclick="closePhotoMode()">✕</button>
             <div class="photo-controls-header">
                 <div class="photo-mode-label">📸 PHOTO MODE</div>
-                <h3>Banner</h3>
+                <h3>Story</h3>
                 <p class="dim small">მოამზადე სქრინი სოც. ქსელებისთვის</p>
             </div>
 
@@ -339,11 +346,9 @@
                     <span class="arrow">▼</span>
                 </summary>
                 <div class="photo-options photo-options-inside">
-
                     <div class="photo-option-group">
                         <label class="photo-toggle"><input type="checkbox" id="photoShowDeveloper" checked><span>👑 Show DEVELOPER badge</span></label>
                     </div>
-
                     <div class="photo-option-group">
                         <label class="photo-option-label">✨ Visual Effects</label>
                         <label class="photo-toggle"><input type="checkbox" id="photoSparkles"><span>✨ Sparkles</span></label>
@@ -352,23 +357,10 @@
                         <label class="photo-toggle"><input type="checkbox" id="photoScanlines"><span>📺 Scanlines</span></label>
                         <label class="photo-toggle"><input type="checkbox" id="photoLightRays"><span>☀️ Light Rays</span></label>
                     </div>
-
                     <div class="photo-option-group">
-                        <label class="photo-option-label">📐 Layout</label>
-                        <select id="photoLayout">
-                            <option value="grid3">⬛⬛⬛ Grid 3 (Default)</option>
-                            <option value="grid2">⬛⬛ Grid 2 (Bigger)</option>
-                            <option value="center-hero">👑 Center Hero</option>
-                            <option value="film-strip">🎞 Film Strip</option>
-                            <option value="minimal">◻️ Minimal</option>
-                        </select>
+                        <label class="photo-option-label">👤 Avatar Size: <span id="photoAvatarSizeLabel">72</span>px</label>
+                        <input type="range" id="photoAvatarSize" min="50" max="110" value="72" step="2">
                     </div>
-
-                    <div class="photo-option-group">
-                        <label class="photo-option-label">👤 Avatar Size: <span id="photoAvatarSizeLabel">58</span>px</label>
-                        <input type="range" id="photoAvatarSize" min="40" max="90" value="58" step="2">
-                    </div>
-
                     <div class="photo-option-group">
                         <label class="photo-option-label">📏 Card Spacing</label>
                         <select id="photoCardSpacing">
@@ -377,7 +369,6 @@
                             <option value="spacious">Spacious</option>
                         </select>
                     </div>
-
                     <div class="photo-option-group">
                         <label class="photo-option-label">⬤ Avatar Shape</label>
                         <select id="photoAvatarShape">
@@ -386,23 +377,21 @@
                             <option value="square">Square</option>
                         </select>
                     </div>
-
                     <div class="photo-option-group">
                         <label class="photo-option-label">🔄 Member Order</label>
                         <div id="photoMemberOrder" class="photo-member-order"></div>
                     </div>
-
                 </div>
             </details>
 
             <button class="btn-primary full-width photo-download-btn" id="photoDownloadBtn">
-                ⬇️ Download PNG (1600×900)
+                ⬇️ Download PNG (1080×1920)
             </button>
             <button class="btn-secondary full-width photo-video-btn" id="photoVideoBtn">
                 🎬 Download Video (WebM, 2s)
             </button>
             <p class="dim small" style="text-align:center; margin-top:8px;">
-                💡 ვიდეოში ჩანს ანიმაციები (sparkles, rays)
+                💡 ვიდეოში ჩანს ანიმაციები
             </p>
         </div>
     </div>
