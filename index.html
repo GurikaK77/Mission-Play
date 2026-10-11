@@ -298,21 +298,21 @@
     </div>
 </div>
 
-<!-- ===== PHOTO MODE (9:16 Vertical) ===== -->
+<!-- ===== PHOTO MODE (4:3) ===== -->
 <div class="photo-mode-overlay" id="photoModeOverlay">
     <div class="photo-mode-container">
         <div class="photo-preview-wrap">
             <div class="photo-preview-scaler" id="photoPreviewScaler">
                 <div class="photo-preview" id="photoPreview"></div>
             </div>
-            <p class="photo-hint">📱 9:16 • 1080×1920 — Instagram / TikTok / Story</p>
+            <p class="photo-hint">💡 4:3 • 1600×1200 — Discord, Instagram, Facebook</p>
         </div>
 
         <div class="photo-controls">
             <button class="modal-close" onclick="closePhotoMode()">✕</button>
             <div class="photo-controls-header">
                 <div class="photo-mode-label">📸 PHOTO MODE</div>
-                <h3>Story</h3>
+                <h3>Banner</h3>
                 <p class="dim small">მოამზადე სქრინი სოც. ქსელებისთვის</p>
             </div>
 
@@ -358,8 +358,8 @@
                         <label class="photo-toggle"><input type="checkbox" id="photoLightRays"><span>☀️ Light Rays</span></label>
                     </div>
                     <div class="photo-option-group">
-                        <label class="photo-option-label">👤 Avatar Size: <span id="photoAvatarSizeLabel">72</span>px</label>
-                        <input type="range" id="photoAvatarSize" min="50" max="110" value="72" step="2">
+                        <label class="photo-option-label">👤 Avatar Size: <span id="photoAvatarSizeLabel">64</span>px</label>
+                        <input type="range" id="photoAvatarSize" min="46" max="100" value="64" step="2">
                     </div>
                     <div class="photo-option-group">
                         <label class="photo-option-label">📏 Card Spacing</label>
@@ -385,7 +385,7 @@
             </details>
 
             <button class="btn-primary full-width photo-download-btn" id="photoDownloadBtn">
-                ⬇️ Download PNG (1080×1920)
+                ⬇️ Download PNG (1600×1200)
             </button>
             <button class="btn-secondary full-width photo-video-btn" id="photoVideoBtn">
                 🎬 Download Video (WebM, 2s)

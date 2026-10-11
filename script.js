@@ -1,6 +1,6 @@
 /* ================================================================
-   MISSION: PLAY — script.js v4
-   Photo Mode 9:16 + DEVELOPER Badge Toggle
+   MISSION: PLAY — script.js v5
+   Photo Mode 4:3 + DEVELOPER Badge Toggle
    ================================================================ */
 
 const firebaseConfig = {
@@ -54,21 +54,21 @@ let photoOptions = {
     noise: false,
     scanlines: false,
     lightRays: false,
-    avatarSize: 72,
+    avatarSize: 64,
     cardSpacing: 'normal',
     avatarShape: 'circle',
     memberOrder: ['DarkTeddy', 'KEROSENE', 'ArLovelyy']
 };
 
 const PHOTO_BACKGROUNDS = [
-    { id: 'gold', name: 'Royal Gold', css: 'linear-gradient(180deg,#0a0a14 0%,#1a1220 50%,#2a1a10 100%)' },
-    { id: 'neon', name: 'Cyber Neon', css: 'linear-gradient(180deg,#050510 0%,#0d0a2a 50%,#1a0a30 100%)' },
-    { id: 'blood', name: 'Blood Moon', css: 'linear-gradient(180deg,#0a0303 0%,#1a0505 50%,#2a0808 100%)' },
-    { id: 'emerald', name: 'Emerald', css: 'linear-gradient(180deg,#040a06 0%,#0a1a10 50%,#0d2a1a 100%)' },
-    { id: 'ocean', name: 'Deep Ocean', css: 'linear-gradient(180deg,#030814 0%,#061428 50%,#0a2040 100%)' },
-    { id: 'sakura', name: 'Sakura', css: 'linear-gradient(180deg,#0a040a 0%,#1a0a15 50%,#2a0a20 100%)' },
-    { id: 'void', name: 'Void', css: 'linear-gradient(180deg,#000000 0%,#0a0a0a 50%,#151515 100%)' },
-    { id: 'sunset', name: 'Sunset', css: 'linear-gradient(180deg,#0a0410 0%,#200820 50%,#3a0a20 100%)' }
+    { id: 'gold', name: 'Royal Gold', css: 'linear-gradient(135deg,#0a0a14 0%,#1a1220 50%,#2a1a10 100%)' },
+    { id: 'neon', name: 'Cyber Neon', css: 'linear-gradient(135deg,#050510 0%,#0d0a2a 50%,#1a0a30 100%)' },
+    { id: 'blood', name: 'Blood Moon', css: 'linear-gradient(135deg,#0a0303 0%,#1a0505 50%,#2a0808 100%)' },
+    { id: 'emerald', name: 'Emerald', css: 'linear-gradient(135deg,#040a06 0%,#0a1a10 50%,#0d2a1a 100%)' },
+    { id: 'ocean', name: 'Deep Ocean', css: 'linear-gradient(135deg,#030814 0%,#061428 50%,#0a2040 100%)' },
+    { id: 'sakura', name: 'Sakura', css: 'linear-gradient(135deg,#0a040a 0%,#1a0a15 50%,#2a0a20 100%)' },
+    { id: 'void', name: 'Void', css: 'linear-gradient(135deg,#000000 0%,#0a0a0a 50%,#151515 100%)' },
+    { id: 'sunset', name: 'Sunset', css: 'linear-gradient(135deg,#0a0410 0%,#200820 50%,#3a0a20 100%)' }
 ];
 
 const gamesData = [
@@ -125,7 +125,6 @@ function getNickname(userData, memberFallback) {
     if (userData?.nickname && userData.nickname !== userData.username) return userData.nickname;
     return userData?.nickname || memberFallback || 'Gamer';
 }
-// 👑 DEVELOPER badge visibility — default true, respects showDeveloperBadge flag
 function isDevBadgeVisible(userData) {
     return userData?.showDeveloperBadge !== false;
 }
@@ -335,7 +334,6 @@ function renderHeroProfiles() {
         const anim = userData?.frameAnimation || (isAdmin ? 'glow' : 'none');
         const username = getUsername(userData, m.name);
         const nickname = getNickname(userData, m.role);
-        // 👑 Developer badge respects toggle
         const showDev = isAdmin && isDevBadgeVisible(userData);
 
         const music = nowPlayingByMember[m.name];
@@ -389,8 +387,8 @@ function updatePhotoScale() {
     const scaler = $('photoPreviewScaler');
     const preview = $('photoPreview');
     if (!scaler || !preview) return;
-    // Preview is 540x960; scaler uses aspect-ratio 9/16
-    const scale = scaler.clientWidth / 540;
+    // Preview is 800x600 (4:3)
+    const scale = scaler.clientWidth / 800;
     preview.style.transform = `scale(${scale})`;
 }
 window.addEventListener('resize', () => {
@@ -464,7 +462,7 @@ function renderMemberOrderUI() {
     }));
 }
 
-/* ============ RENDER PREVIEW (9:16 Vertical) ============ */
+/* ============ RENDER PREVIEW (4:3) ============ */
 function renderPhotoPreview() {
     const preview = $('photoPreview'); if (!preview) return;
     const bg = PHOTO_BACKGROUNDS.find(b => b.id === photoOptions.bg) || PHOTO_BACKGROUNDS[0];
@@ -510,11 +508,11 @@ function renderPhotoPreview() {
 
         const badges = [];
         if (photoOptions.showMusic && music?.title && music?.playing) {
-            const t = music.title.length > 22 ? music.title.substring(0, 22) + '…' : music.title;
+            const t = music.title.length > 18 ? music.title.substring(0, 18) + '…' : music.title;
             badges.push(`<span class="pp-pill music">🎵 <span class="pp-pill-text">${escapeHtml(t)}</span></span>`);
         }
         if (photoOptions.showGames && game?.gameTitle) {
-            const t = game.gameTitle.length > 22 ? game.gameTitle.substring(0, 22) + '…' : game.gameTitle;
+            const t = game.gameTitle.length > 18 ? game.gameTitle.substring(0, 18) + '…' : game.gameTitle;
             const img = game.gameImage ? `<img src="${game.gameImage}" class="pp-pill-img" crossorigin="anonymous" onerror="this.style.display='none'">` : '';
             badges.push(`<span class="pp-pill game">${img}<span class="pp-pill-text">${escapeHtml(t)}</span></span>`);
         }
@@ -528,15 +526,13 @@ function renderPhotoPreview() {
                     <div class="pp-frame ${frameClass}"></div>
                     <img src="${avatar}" alt="${escapeHtml(name)}" onerror="this.src='${defaultAvatar(name)}'" crossorigin="anonymous">
                 </div>
-                <div class="pp-member-info">
-                    <div class="pp-name">
-                        ${escapeHtml(username)}
-                        ${isAdmin ? '<span class="crown">👑</span>' : ''}
-                    </div>
-                    <div class="pp-role">${escapeHtml(nickname)}</div>
-                    ${devBadge}
-                    ${badges.length ? `<div class="pp-badges">${badges.join('')}</div>` : ''}
+                <div class="pp-name">
+                    ${escapeHtml(username)}
+                    ${isAdmin ? '<span class="crown">👑</span>' : ''}
                 </div>
+                <div class="pp-role">${escapeHtml(nickname)}</div>
+                ${devBadge}
+                ${badges.length ? `<div class="pp-badges">${badges.join('')}</div>` : ''}
             </div>`;
     }).join('');
 
@@ -550,7 +546,7 @@ function renderPhotoPreview() {
 
     let sparklesHtml = '';
     if (photoOptions.sparkles) {
-        const sparkles = Array.from({ length: 30 }, () => {
+        const sparkles = Array.from({ length: 25 }, () => {
             const x = Math.random() * 100;
             const y = Math.random() * 100;
             const delay = (Math.random() * 3).toFixed(2);
@@ -573,7 +569,7 @@ function renderPhotoPreview() {
                     <span class="pp-logo-icon">🎯</span>
                     <span>Mission<span class="gold">Play</span></span>
                 </div>
-                <div class="pp-badge-top">🏆 2026</div>
+                <div class="pp-badge-top">🏆 Gaming Hub 2026</div>
             </div>
             <div class="pp-title">${escapeHtml(title)}</div>
             <div class="${membersClass}">${membersHtml}</div>
@@ -599,19 +595,19 @@ async function downloadPhoto() {
     clone.style.position = 'fixed';
     clone.style.left = '-99999px';
     clone.style.top = '0';
-    clone.style.width = '540px';
-    clone.style.height = '960px';
+    clone.style.width = '800px';
+    clone.style.height = '600px';
     document.body.appendChild(clone);
 
     try {
         const canvas = await html2canvas(clone, {
-            scale: 2, backgroundColor: '#06060a', useCORS: true, allowTaint: true, logging: false, width: 540, height: 960
+            scale: 2, backgroundColor: '#06060a', useCORS: true, allowTaint: true, logging: false, width: 800, height: 600
         });
         const link = document.createElement('a');
         link.download = `mission-play-${Date.now()}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
-        toast('✅ Downloaded! 1080×1920 (IG Story)', 'success');
+        toast('✅ Downloaded! 1600×1200', 'success');
     } catch (err) {
         console.error('Download error:', err);
         toast('❌ ' + err.message, 'error');
@@ -640,16 +636,16 @@ async function downloadVideo() {
     clone.style.position = 'fixed';
     clone.style.left = '0';
     clone.style.top = '0';
-    clone.style.width = '540px';
-    clone.style.height = '960px';
+    clone.style.width = '800px';
+    clone.style.height = '600px';
     clone.style.opacity = '0.01';
     clone.style.pointerEvents = 'none';
     clone.style.zIndex = '-1';
     document.body.appendChild(clone);
 
     const canvas = document.createElement('canvas');
-    canvas.width = 1080;
-    canvas.height = 1920;
+    canvas.width = 1600;
+    canvas.height = 1200;
     const ctx = canvas.getContext('2d');
 
     let mimeType = 'video/webm;codecs=vp9';
@@ -672,10 +668,10 @@ async function downloadVideo() {
 
         for (let i = 0; i < totalFrames; i++) {
             const snapshot = await html2canvas(clone, {
-                scale: 2, backgroundColor: '#06060a', useCORS: true, allowTaint: true, logging: false, width: 540, height: 960
+                scale: 2, backgroundColor: '#06060a', useCORS: true, allowTaint: true, logging: false, width: 800, height: 600
             });
-            ctx.clearRect(0, 0, 1080, 1920);
-            ctx.drawImage(snapshot, 0, 0, 1080, 1920);
+            ctx.clearRect(0, 0, 1600, 1200);
+            ctx.drawImage(snapshot, 0, 0, 1600, 1200);
             await new Promise(r => setTimeout(r, frameDelay));
         }
 
@@ -708,7 +704,6 @@ function renderAdminPick() {
     if (!recommendation || !recommendation.gameId) { container.style.display = 'none'; container.innerHTML = ''; return; }
     const g = gamesData.find(x => x.id === recommendation.gameId);
     if (!g) { container.style.display = 'none'; return; }
-    // 👑 Check if admin has dev badge enabled
     const adminMember = MEMBERS.find(m => m.isAdmin);
     const adminData = adminMember ? memberUserData[adminMember.name] : null;
     const showCrown = isDevBadgeVisible(adminData);
@@ -799,7 +794,7 @@ $('registerForm')?.addEventListener('submit', async (e) => {
                 avatar: memberInfo.avatar,
                 frame: role === 'admin' ? 'royal' : 'gold',
                 frameAnimation: role === 'admin' ? 'glow' : 'none',
-                showDeveloperBadge: true, // 👑 default
+                showDeveloperBadge: true,
                 theme: localStorage.getItem('mp-theme') || 'royal-gold', role, createdAt: Date.now()
             });
             await syncPublicProfile(selectedMember, {
@@ -940,7 +935,6 @@ function openProfileModal() {
     $('profileModal').classList.add('active');
     fillProfileForm(); renderFramesGrid(); renderAnimationsGrid(); updateProfileHeader();
     populateGameSelect();
-    // 👑 Show DEVELOPER toggle only for admin
     const devWrapper = $('editDevBadgeWrapper');
     if (devWrapper) {
         devWrapper.style.display = currentUser.role === 'admin' ? 'flex' : 'none';
@@ -964,7 +958,6 @@ function fillProfileForm() {
     $('editAvatarUrl').value = currentUser.avatar?.startsWith('data:') ? '' : (currentUser.avatar || '');
     previewFrame = currentUser.frame || 'gold';
     previewAnim = currentUser.frameAnimation || 'none';
-    // 👑 Load developer badge toggle state
     if ($('editShowDeveloper')) {
         $('editShowDeveloper').checked = currentUser.showDeveloperBadge !== false;
     }
@@ -992,7 +985,6 @@ $('saveProfileBtn')?.addEventListener('click', async () => {
     const nickname = $('editNickname').value.trim() || 'Gamer';
     const avatarUrl = $('editAvatarUrl').value.trim();
     const fileInput = $('editAvatarFile');
-    // 👑 Only save if admin
     const showDeveloperBadge = currentUser.role === 'admin' 
         ? ($('editShowDeveloper')?.checked !== false) 
         : (currentUser.showDeveloperBadge !== false);
