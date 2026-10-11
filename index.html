@@ -232,8 +232,12 @@
 
         <div class="profile-tab-content" id="ptab-edit">
             <div class="input-group">
-                <label>🏷 Nickname</label>
-                <input type="text" id="editNickname" maxlength="20" placeholder="Your nickname">
+                <label>👤 Username</label>
+                <input type="text" id="editUsername" maxlength="20" placeholder="e.g. Gurika">
+            </div>
+            <div class="input-group">
+                <label>🏷 Nickname / Tagline</label>
+                <input type="text" id="editNickname" maxlength="25" placeholder="e.g. Fullstack Dev">
             </div>
             <div class="input-group">
                 <label>🖼 Avatar URL</label>
@@ -253,9 +257,7 @@
         <div class="profile-tab-content" id="ptab-activity" style="display:none;">
             <h4>🎮 What are you playing?</h4>
             <div class="input-group">
-                <select id="gameSelect">
-                    <option value="">— None (clear) —</option>
-                </select>
+                <select id="gameSelect"></select>
             </div>
             <button class="btn-primary full-width" id="setGameBtn">🎮 Set as Playing</button>
             <button class="btn-secondary full-width" id="clearGameBtn" style="margin-top:10px;">🗑 Clear Game Status</button>
@@ -382,10 +384,6 @@
                     <label class="photo-toggle">
                         <input type="checkbox" id="photoShowGames" checked>
                         <span>🎮 Show Games</span>
-                    </label>
-                    <label class="photo-toggle">
-                        <input type="checkbox" id="photoShowBadges" checked>
-                        <span>✓ Show Registered</span>
                     </label>
                 </div>
 

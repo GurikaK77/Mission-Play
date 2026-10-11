@@ -1,6 +1,5 @@
 /* ================================================================
-   MISSION: PLAY — script.js
-   + Photo Mode + Now Playing Game
+   MISSION: PLAY — script.js (FINAL)
    ================================================================ */
 
 const firebaseConfig = {
@@ -41,11 +40,9 @@ let ytPlayerReady = false;
 let ytApiLoading = false;
 let currentMusic = null;
 
-// Photo Mode state
 let photoOptions = {
     showMusic: true,
     showGames: true,
-    showBadges: true,
     bg: 'gold',
     caption: '',
     siteLink: 'mission-play.netlify.app',
@@ -53,14 +50,14 @@ let photoOptions = {
 };
 
 const PHOTO_BACKGROUNDS = [
-    { id: 'gold', name: 'Royal Gold', css: 'linear-gradient(135deg, #0a0a14 0%, #1a1220 50%, #2a1a10 100%)' },
-    { id: 'neon', name: 'Cyber Neon', css: 'linear-gradient(135deg, #050510 0%, #0d0a2a 50%, #1a0a30 100%)' },
-    { id: 'blood', name: 'Blood Moon', css: 'linear-gradient(135deg, #0a0303 0%, #1a0505 50%, #2a0808 100%)' },
-    { id: 'emerald', name: 'Emerald', css: 'linear-gradient(135deg, #040a06 0%, #0a1a10 50%, #0d2a1a 100%)' },
-    { id: 'ocean', name: 'Deep Ocean', css: 'linear-gradient(135deg, #030814 0%, #061428 50%, #0a2040 100%)' },
-    { id: 'sakura', name: 'Sakura', css: 'linear-gradient(135deg, #0a040a 0%, #1a0a15 50%, #2a0a20 100%)' },
-    { id: 'void', name: 'Void', css: 'linear-gradient(135deg, #000000 0%, #0a0a0a 50%, #151515 100%)' },
-    { id: 'sunset', name: 'Sunset', css: 'linear-gradient(135deg, #0a0410 0%, #200820 50%, #3a0a20 100%)' }
+    { id: 'gold', name: 'Royal Gold', css: 'linear-gradient(135deg,#0a0a14 0%,#1a1220 50%,#2a1a10 100%)' },
+    { id: 'neon', name: 'Cyber Neon', css: 'linear-gradient(135deg,#050510 0%,#0d0a2a 50%,#1a0a30 100%)' },
+    { id: 'blood', name: 'Blood Moon', css: 'linear-gradient(135deg,#0a0303 0%,#1a0505 50%,#2a0808 100%)' },
+    { id: 'emerald', name: 'Emerald', css: 'linear-gradient(135deg,#040a06 0%,#0a1a10 50%,#0d2a1a 100%)' },
+    { id: 'ocean', name: 'Deep Ocean', css: 'linear-gradient(135deg,#030814 0%,#061428 50%,#0a2040 100%)' },
+    { id: 'sakura', name: 'Sakura', css: 'linear-gradient(135deg,#0a040a 0%,#1a0a15 50%,#2a0a20 100%)' },
+    { id: 'void', name: 'Void', css: 'linear-gradient(135deg,#000000 0%,#0a0a0a 50%,#151515 100%)' },
+    { id: 'sunset', name: 'Sunset', css: 'linear-gradient(135deg,#0a0410 0%,#200820 50%,#3a0a20 100%)' }
 ];
 
 const gamesData = [
@@ -111,6 +108,16 @@ function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+/* ============ HELPERS ============ */
+function getUsername(userData, memberName) {
+    return userData?.username || userData?.nickname || memberName;
+}
+function getNickname(userData, memberFallback) {
+    // If old data has nickname === username, use member fallback (default role)
+    if (userData?.nickname && userData.nickname !== userData.username) return userData.nickname;
+    return userData?.nickname || memberFallback || 'Gamer';
+}
+
 /* ============ MIGRATION ============ */
 async function silentMigrate() {
     try {
@@ -128,6 +135,34 @@ async function silentMigrate() {
             }
         }
     } catch (e) { console.warn('Migration:', e.message); }
+}
+
+async function migrateUserFields(uid, userData) {
+    // nickname → username migration
+    const updates = {};
+    if (!userData.username && userData.nickname) {
+        updates.username = userData.nickname;
+    }
+    // Ensure nickname (tagline) exists
+    if (!userData.username && userData.nickname) {
+        // old schema: only nickname existed, which was actually username
+        const m = MEMBERS.find(x => x.name === userData.memberName);
+        updates.nickname = m?.role || 'Gamer';
+    } else if (userData.nickname && userData.username && userData.nickname === userData.username) {
+        // Both exist and are equal → nickname was never set properly
+        const m = MEMBERS.find(x => x.name === userData.memberName);
+        updates.nickname = m?.role || 'Gamer';
+    }
+    if (Object.keys(updates).length) {
+        try {
+            await db.ref('users/' + uid).update(updates);
+            Object.assign(userData, updates);
+            if (userData.memberName) {
+                await db.ref('publicProfiles/' + userData.memberName).update(updates).catch(() => {});
+            }
+        } catch (e) { console.warn('Migrate user:', e.message); }
+    }
+    return userData;
 }
 
 async function syncPublicProfile(memberName, data) {
@@ -315,7 +350,8 @@ function renderHeroProfiles() {
         const avatar = userData?.avatar || m.avatar;
         const frame = userData?.frame || (isAdmin ? 'royal' : 'gold');
         const anim = userData?.frameAnimation || (isAdmin ? 'glow' : 'none');
-        const nickname = userData?.nickname || m.name;
+        const username = getUsername(userData, m.name);
+        const nickname = getNickname(userData, m.role);
 
         const music = nowPlayingByMember[m.name];
         const isPlaying = music?.playing === true && music?.title;
@@ -332,22 +368,25 @@ function renderHeroProfiles() {
                 <span class="game-title">${escapeHtml(game.gameTitle)}</span>
             </div>` : '';
 
+        // Only show "Available" badge if slot is empty (deleted)
+        const availableBadge = isClaimed ? '' : '<span class="claimed-badge">Available</span>';
+
         return `
             <div class="profile-card ${isAdmin ? 'is-admin' : ''}">
                 <div class="avatar-wrapper" data-frame="${frame}" data-anim="${anim}">
                     <img src="${avatar}" alt="${m.name}" onerror="this.src='${defaultAvatar(m.name)}'">
                 </div>
-                <span class="profile-name">${escapeHtml(nickname)}</span>
-                <span class="profile-role">${m.role}</span>
+                <span class="profile-name">${escapeHtml(username)}</span>
+                <span class="profile-role">${escapeHtml(nickname)}</span>
                 ${isAdmin ? '<span class="developer-badge">👑 Developer</span>' : ''}
-                ${isClaimed ? '<span class="claimed-badge">✓ Registered</span>' : '<span class="claimed-badge">Available</span>'}
+                ${availableBadge}
                 ${musicBadge}
                 ${gameBadge}
             </div>`;
     }).join('');
 }
 
-/* ============ PHOTO MODE (Landscape 16:9) ============ */
+/* ============ PHOTO MODE ============ */
 function openPhotoMode() {
     $('photoModeOverlay').classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -360,7 +399,6 @@ function closePhotoMode() {
     $('photoModeOverlay').classList.remove('active');
     document.body.style.overflow = '';
 }
-
 function updatePhotoScale() {
     const scaler = $('photoPreviewScaler');
     const preview = $('photoPreview');
@@ -407,16 +445,21 @@ function renderPhotoPreview() {
         if (g) {
             featuredGameHtml = `
                 <div class="pp-featured-game">
+                    <img src="${g.image}" class="pp-game-img" crossorigin="anonymous" onerror="this.style.display='none'">
                     <span class="label">🎮 Now Playing</span>
                     <span class="game-name">${escapeHtml(g.title)}</span>
                 </div>`;
         }
     } else if (photoOptions.featuredGame === 'auto') {
-        const games = MEMBERS.map(m => nowPlayingGameByMember[m.name]?.gameTitle).filter(Boolean);
-        const unique = [...new Set(games)];
-        if (unique.length) {
+        // Get first game with image
+        const entries = MEMBERS.map(m => nowPlayingGameByMember[m.name]).filter(Boolean);
+        if (entries.length) {
+            const first = entries[0];
+            const names = entries.map(e => e.gameTitle);
+            const unique = [...new Set(names)];
             featuredGameHtml = `
                 <div class="pp-featured-game">
+                    ${first.gameImage ? `<img src="${first.gameImage}" class="pp-game-img" crossorigin="anonymous" onerror="this.style.display='none'">` : ''}
                     <span class="label">🎮 Now Playing</span>
                     <span class="game-name">${unique.map(escapeHtml).join(' • ')}</span>
                 </div>`;
@@ -426,24 +469,22 @@ function renderPhotoPreview() {
     const membersHtml = MEMBERS.map(m => {
         const isAdmin = m.name === 'KEROSENE';
         const userData = memberUserData[m.name];
-        const nickname = userData?.nickname || m.name;
+        const username = getUsername(userData, m.name);
+        const nickname = getNickname(userData, m.role);
         const avatar = userData?.avatar || m.avatar;
         const frame = userData?.frame || (isAdmin ? 'royal' : 'gold');
-        const isClaimed = !!memberSlots[m.name];
         const music = nowPlayingByMember[m.name];
         const game = nowPlayingGameByMember[m.name];
 
         const badges = [];
         if (photoOptions.showMusic && music?.title && music?.playing) {
-            const t = music.title.length > 20 ? music.title.substring(0, 20) + '…' : music.title;
-            badges.push(`<span class="pp-pill music">🎵 ${escapeHtml(t)}</span>`);
+            const t = music.title.length > 18 ? music.title.substring(0, 18) + '…' : music.title;
+            badges.push(`<span class="pp-pill music">🎵 <span class="pp-pill-text">${escapeHtml(t)}</span></span>`);
         }
         if (photoOptions.showGames && game?.gameTitle) {
-            const t = game.gameTitle.length > 20 ? game.gameTitle.substring(0, 20) + '…' : game.gameTitle;
-            badges.push(`<span class="pp-pill game">🎮 ${escapeHtml(t)}</span>`);
-        }
-        if (photoOptions.showBadges && isClaimed) {
-            badges.push(`<span class="pp-pill registered">✓ Registered</span>`);
+            const t = game.gameTitle.length > 18 ? game.gameTitle.substring(0, 18) + '…' : game.gameTitle;
+            const img = game.gameImage ? `<img src="${game.gameImage}" class="pp-pill-img" crossorigin="anonymous" onerror="this.style.display='none'">` : '';
+            badges.push(`<span class="pp-pill game">${img}<span class="pp-pill-text">${escapeHtml(t)}</span></span>`);
         }
 
         const frameClass = 'pp-frame-' + (['gold','royal','neon','fire','ice','hacker','rainbow','legendary'].includes(frame) ? frame : 'none');
@@ -455,10 +496,10 @@ function renderPhotoPreview() {
                     <img src="${avatar}" alt="${escapeHtml(m.name)}" onerror="this.src='${defaultAvatar(m.name)}'" crossorigin="anonymous">
                 </div>
                 <div class="pp-name">
-                    ${escapeHtml(nickname)}
+                    ${escapeHtml(username)}
                     ${isAdmin ? '<span class="crown">👑</span>' : ''}
                 </div>
-                <div class="pp-role">${escapeHtml(m.role)}</div>
+                <div class="pp-role">${escapeHtml(nickname)}</div>
                 ${badges.length ? `<div class="pp-badges">${badges.join('')}</div>` : ''}
             </div>`;
     }).join('');
@@ -498,7 +539,6 @@ async function downloadPhoto() {
     btn.textContent = '⏳ Generating...';
     btn.disabled = true;
 
-    // Clone off-screen for high-res capture
     const clone = preview.cloneNode(true);
     clone.style.transform = 'none';
     clone.style.position = 'fixed';
@@ -532,7 +572,6 @@ async function downloadPhoto() {
         btn.disabled = false;
     }
 }
-
 
 /* ============ RECOMMENDATION ============ */
 function listenRecommendation() {
@@ -624,15 +663,24 @@ $('registerForm')?.addEventListener('submit', async (e) => {
         const memberInfo = MEMBERS.find(m => m.name === selectedMember);
         try {
             await saveUserRecord(uid, {
-                email, memberName: selectedMember, nickname: selectedMember,
-                avatar: memberInfo.avatar, frame: role === 'admin' ? 'royal' : 'gold',
+                email,
+                memberName: selectedMember,
+                username: selectedMember,
+                nickname: memberInfo.role,   // default tagline
+                avatar: memberInfo.avatar,
+                frame: role === 'admin' ? 'royal' : 'gold',
                 frameAnimation: role === 'admin' ? 'glow' : 'none',
-                theme: localStorage.getItem('mp-theme') || 'royal-gold', role, createdAt: Date.now()
+                theme: localStorage.getItem('mp-theme') || 'royal-gold',
+                role,
+                createdAt: Date.now()
             });
             await syncPublicProfile(selectedMember, {
-                nickname: selectedMember, avatar: memberInfo.avatar,
+                username: selectedMember,
+                nickname: memberInfo.role,
+                avatar: memberInfo.avatar,
                 frame: role === 'admin' ? 'royal' : 'gold',
-                frameAnimation: role === 'admin' ? 'glow' : 'none', role
+                frameAnimation: role === 'admin' ? 'glow' : 'none',
+                role
             });
         } catch (dbErr) {
             await db.ref('memberSlots/' + selectedMember).remove().catch(() => {});
@@ -686,17 +734,26 @@ async function handleGoogleResult(user, isRegister, pendingMember) {
         const role = pendingMember === 'KEROSENE' ? 'admin' : 'member';
         const memberInfo = MEMBERS.find(m => m.name === pendingMember);
         const initialAvatar = user.photoURL || memberInfo.avatar;
-        const initialNick = user.displayName || pendingMember;
+        const initialUsername = user.displayName || pendingMember;
         await saveUserRecord(user.uid, {
-            email: user.email, memberName: pendingMember, nickname: initialNick,
-            avatar: initialAvatar, frame: role === 'admin' ? 'royal' : 'gold',
+            email: user.email,
+            memberName: pendingMember,
+            username: initialUsername,
+            nickname: memberInfo.role,
+            avatar: initialAvatar,
+            frame: role === 'admin' ? 'royal' : 'gold',
             frameAnimation: role === 'admin' ? 'glow' : 'none',
-            theme: localStorage.getItem('mp-theme') || 'royal-gold', role, createdAt: Date.now()
+            theme: localStorage.getItem('mp-theme') || 'royal-gold',
+            role,
+            createdAt: Date.now()
         });
         await syncPublicProfile(pendingMember, {
-            nickname: initialNick, avatar: initialAvatar,
+            username: initialUsername,
+            nickname: memberInfo.role,
+            avatar: initialAvatar,
             frame: role === 'admin' ? 'royal' : 'gold',
-            frameAnimation: role === 'admin' ? 'glow' : 'none', role
+            frameAnimation: role === 'admin' ? 'glow' : 'none',
+            role
         });
         toast('🎉 Welcome, ' + pendingMember + '!', 'success');
         closeAuthModal();
@@ -716,6 +773,8 @@ auth.onAuthStateChanged(async (user) => {
         const snap = await db.ref('users/' + user.uid).once('value');
         if (snap.exists()) {
             currentUser = snap.val();
+            // Migrate old nickname → username / nickname
+            currentUser = await migrateUserFields(user.uid, currentUser);
             if (currentUser.theme) applyTheme(currentUser.theme);
             updateAuthUI();
             db.ref('users/' + user.uid + '/music/playing').onDisconnect().set(false);
@@ -744,13 +803,13 @@ function updateAuthUI() {
     if (firebaseUser && currentUser) {
         if (authBtn) authBtn.style.display = 'none';
         if (profileBtn) profileBtn.style.display = 'flex';
-        if (mobileLink) mobileLink.textContent = '👤 ' + (currentUser.nickname || 'Profile');
+        if (mobileLink) mobileLink.textContent = '👤 ' + (currentUser.username || 'Profile');
         const navWrap = profileBtn.querySelector('.avatar-wrapper');
         const navImg = $('navAvatar');
         if (navWrap) { navWrap.dataset.frame = currentUser.frame || 'gold'; navWrap.dataset.anim = currentUser.frameAnimation || 'none'; }
-        if (navImg) navImg.src = currentUser.avatar || defaultAvatar(currentUser.nickname);
+        if (navImg) navImg.src = currentUser.avatar || defaultAvatar(currentUser.username || currentUser.memberName);
         const navNick = $('navNick');
-        if (navNick) navNick.textContent = currentUser.nickname || 'User';
+        if (navNick) navNick.textContent = currentUser.username || 'User';
     } else {
         if (authBtn) { authBtn.style.display = 'block'; authBtn.textContent = '👤 Sign In'; }
         if (profileBtn) profileBtn.style.display = 'none';
@@ -778,14 +837,17 @@ document.querySelectorAll('.profile-tab').forEach(tab => tab.addEventListener('c
 
 function fillProfileForm() {
     if (!currentUser) return;
-    $('editNickname').value = currentUser.nickname || '';
+    $('editUsername').value = currentUser.username || currentUser.memberName || '';
+    $('editNickname').value = getNickname(currentUser, MEMBERS.find(m => m.name === currentUser.memberName)?.role);
     $('editAvatarUrl').value = currentUser.avatar?.startsWith('data:') ? '' : (currentUser.avatar || '');
     previewFrame = currentUser.frame || 'gold';
     previewAnim = currentUser.frameAnimation || 'none';
 }
 function updateProfileHeader() {
     if (!currentUser) return;
-    $('profileDisplayName').textContent = currentUser.nickname || 'User';
+    const username = currentUser.username || currentUser.memberName || 'User';
+    const nickname = getNickname(currentUser, MEMBERS.find(m => m.name === currentUser.memberName)?.role);
+    $('profileDisplayName').textContent = username;
     $('profileMemberName').textContent = 'Member: ' + (currentUser.memberName || '—');
     $('profileEmail').textContent = currentUser.email || '';
     const roleBadge = $('profileRoleBadge');
@@ -794,13 +856,14 @@ function updateProfileHeader() {
     const wrap = $('profileAvatarWrapper');
     wrap.dataset.frame = currentUser.frame || 'gold';
     wrap.dataset.anim = currentUser.frameAnimation || 'none';
-    $('profileAvatarImg').src = currentUser.avatar || defaultAvatar(currentUser.nickname);
+    $('profileAvatarImg').src = currentUser.avatar || defaultAvatar(username);
 }
 
 $('saveProfileBtn')?.addEventListener('click', async () => {
     if (!currentUser || !firebaseUser) return;
     const msg = $('profileSaveMsg'); msg.textContent = ''; msg.className = 'auth-error';
-    const nickname = $('editNickname').value.trim() || currentUser.memberName;
+    const username = $('editUsername').value.trim() || currentUser.memberName;
+    const nickname = $('editNickname').value.trim() || 'Gamer';
     const avatarUrl = $('editAvatarUrl').value.trim();
     const fileInput = $('editAvatarFile');
     let avatar = currentUser.avatar;
@@ -810,9 +873,11 @@ $('saveProfileBtn')?.addEventListener('click', async () => {
         avatar = await fileToBase64(file);
     } else if (avatarUrl) { avatar = avatarUrl; }
     try {
-        await db.ref('users/' + firebaseUser.uid).update({ nickname, avatar });
-        await syncPublicProfile(currentUser.memberName, { nickname, avatar });
-        currentUser.nickname = nickname; currentUser.avatar = avatar;
+        await db.ref('users/' + firebaseUser.uid).update({ username, nickname, avatar });
+        await syncPublicProfile(currentUser.memberName, { username, nickname, avatar });
+        currentUser.username = username;
+        currentUser.nickname = nickname;
+        currentUser.avatar = avatar;
         updateProfileHeader(); updateAuthUI();
         msg.textContent = '✅ Profile saved!'; msg.className = 'auth-error success';
         toast('💾 Profile updated', 'success');
@@ -833,7 +898,6 @@ $('useDiscordAvatarBtn')?.addEventListener('click', async () => {
     } catch (err) { toast('❌ ' + err.message, 'error'); }
 });
 
-/* Game select */
 $('setGameBtn')?.addEventListener('click', async () => {
     const gameId = $('gameSelect').value;
     if (!gameId) { toast('⚠️ აირჩიე თამაში', 'error'); return; }
@@ -857,7 +921,7 @@ function fileToBase64(file) {
 
 function renderFramesGrid() {
     const grid = $('framesGrid'); if (!grid) return;
-    const userAvatar = currentUser?.avatar || defaultAvatar(currentUser?.nickname || 'U');
+    const userAvatar = currentUser?.avatar || defaultAvatar(currentUser?.username || 'U');
     grid.innerHTML = framesData.map(f => `
         <div class="frame-option ${f === previewFrame ? 'selected' : ''}" data-frame="${f}">
             <div class="avatar-wrapper" data-frame="${f}" data-anim="none"><img src="${userAvatar}" alt=""></div>
@@ -912,9 +976,9 @@ async function loadAdminUsers() {
         if (!entries.length) { list.innerHTML = '<p class="dim">No users yet.</p>'; return; }
         list.innerHTML = entries.map(([uid, u]) => `
             <div class="admin-user">
-                <div class="avatar-wrapper" data-frame="${u.frame || 'gold'}" data-anim="none"><img src="${u.avatar || defaultAvatar(u.nickname)}" alt=""></div>
+                <div class="avatar-wrapper" data-frame="${u.frame || 'gold'}" data-anim="none"><img src="${u.avatar || defaultAvatar(u.username || u.nickname)}" alt=""></div>
                 <div class="admin-user-info">
-                    <div class="name">${u.nickname || '—'} ${u.role === 'admin' ? '👑' : ''}</div>
+                    <div class="name">${u.username || u.nickname || '—'} ${u.role === 'admin' ? '👑' : ''}</div>
                     <div class="email">${u.email || ''}</div>
                     <div class="meta">Member: ${u.memberName || '—'} • ${u.role}</div>
                 </div>
@@ -946,7 +1010,7 @@ $('setRecommendationBtn')?.addEventListener('click', async () => {
     if (!gameId) { toast('⚠️ აირჩიე', 'error'); return; }
     const g = gamesData.find(x => x.id === gameId); if (!g) return;
     try {
-        await db.ref('recommendation').set({ gameId: g.id, gameTitle: g.title, recommendedBy: currentUser.nickname || 'Admin', timestamp: Date.now() });
+        await db.ref('recommendation').set({ gameId: g.id, gameTitle: g.title, recommendedBy: currentUser.username || 'Admin', timestamp: Date.now() });
         toast('👑 ' + g.title, 'success');
     } catch (err) { toast('❌ ' + err.message, 'error'); }
 });
@@ -1334,16 +1398,9 @@ $('photoDownloadBtn')?.addEventListener('click', downloadPhoto);
 // Photo mode option listeners
 $('photoShowMusic')?.addEventListener('change', (e) => { photoOptions.showMusic = e.target.checked; renderPhotoPreview(); });
 $('photoShowGames')?.addEventListener('change', (e) => { photoOptions.showGames = e.target.checked; renderPhotoPreview(); });
-$('photoShowBadges')?.addEventListener('change', (e) => { photoOptions.showBadges = e.target.checked; renderPhotoPreview(); });
 $('photoCaption')?.addEventListener('input', (e) => { photoOptions.caption = e.target.value; renderPhotoPreview(); });
 $('photoSiteLink')?.addEventListener('input', (e) => { photoOptions.siteLink = e.target.value || 'mission-play.netlify.app'; renderPhotoPreview(); });
 $('photoFeaturedGame')?.addEventListener('change', (e) => { photoOptions.featuredGame = e.target.value; renderPhotoPreview(); });
-
-document.querySelectorAll('.photo-layout-btn').forEach(btn => btn.addEventListener('click', () => {
-    photoOptions.layout = btn.dataset.layout;
-    document.querySelectorAll('.photo-layout-btn').forEach(b => b.classList.toggle('active', b.dataset.layout === photoOptions.layout));
-    renderPhotoPreview();
-}));
 
 $('authModal')?.addEventListener('click', (e) => { if (e.target.id === 'authModal') closeAuthModal(); });
 $('profileModal')?.addEventListener('click', (e) => { if (e.target.id === 'profileModal') closeProfileModal(); });
