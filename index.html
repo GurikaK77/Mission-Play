@@ -141,9 +141,7 @@
     </footer>
 </div>
 
-<div class="modal-overlay" id="gameModal">
-    <div class="modal-content" id="modalContent"></div>
-</div>
+<div class="modal-overlay" id="gameModal"><div class="modal-content" id="modalContent"></div></div>
 
 <div class="modal-overlay" id="authModal">
     <div class="modal-content auth-modal-content">
@@ -155,16 +153,9 @@
                 <button class="auth-tab" data-tab="register" id="tabRegister">Register</button>
             </div>
         </div>
-
         <form class="auth-form" id="loginForm">
-            <div class="input-group">
-                <label>📧 Email</label>
-                <input type="email" id="loginEmail" required placeholder="your@email.com">
-            </div>
-            <div class="input-group">
-                <label>🔒 Password</label>
-                <input type="password" id="loginPassword" required placeholder="••••••••">
-            </div>
+            <div class="input-group"><label>📧 Email</label><input type="email" id="loginEmail" required placeholder="your@email.com"></div>
+            <div class="input-group"><label>🔒 Password</label><input type="password" id="loginPassword" required placeholder="••••••••"></div>
             <button type="submit" class="btn-primary full-width" id="loginBtn">Sign In</button>
             <div class="divider"><span>or</span></div>
             <button type="button" class="google-btn" id="googleLoginBtn">
@@ -173,16 +164,9 @@
             </button>
             <p class="auth-error" id="loginError"></p>
         </form>
-
         <form class="auth-form" id="registerForm" style="display:none;">
-            <div class="input-group">
-                <label>📧 Email</label>
-                <input type="email" id="regEmail" required placeholder="your@email.com">
-            </div>
-            <div class="input-group">
-                <label>🔒 Password (min 6 chars)</label>
-                <input type="password" id="regPassword" required minlength="6" placeholder="••••••••">
-            </div>
+            <div class="input-group"><label>📧 Email</label><input type="email" id="regEmail" required placeholder="your@email.com"></div>
+            <div class="input-group"><label>🔒 Password (min 6 chars)</label><input type="password" id="regPassword" required minlength="6" placeholder="••••••••"></div>
             <div class="member-picker">
                 <label>🎭 Choose Your Identity</label>
                 <p class="hint">Each member can only be claimed by one person</p>
@@ -196,7 +180,6 @@
             </button>
             <p class="auth-error" id="registerError"></p>
         </form>
-
         <div class="no-register-msg" id="noRegisterMsg" style="display:none;">
             <div class="lock-icon-big">🔒</div>
             <h3>Registration Closed</h3>
@@ -208,7 +191,6 @@
 <div class="modal-overlay" id="profileModal">
     <div class="modal-content profile-modal-content">
         <button class="modal-close" onclick="closeProfileModal()">✕</button>
-
         <div class="profile-header-section">
             <div class="avatar-preview">
                 <div class="avatar-wrapper" id="profileAvatarWrapper" data-frame="gold" data-anim="none">
@@ -222,50 +204,28 @@
                 <p id="profileEmail" class="dim small">—</p>
             </div>
         </div>
-
         <div class="profile-tabs">
             <button class="profile-tab active" data-ptab="edit">✏️ Edit Profile</button>
             <button class="profile-tab" data-ptab="activity">🎮 Activity</button>
             <button class="profile-tab" data-ptab="frames">🖼 Frames</button>
             <button class="profile-tab" data-ptab="admin" id="adminTab" style="display:none;">👑 Admin</button>
         </div>
-
         <div class="profile-tab-content" id="ptab-edit">
-            <div class="input-group">
-                <label>👤 Username</label>
-                <input type="text" id="editUsername" maxlength="20" placeholder="e.g. Gurika">
-            </div>
-            <div class="input-group">
-                <label>🏷 Nickname / Tagline</label>
-                <input type="text" id="editNickname" maxlength="25" placeholder="e.g. Fullstack Dev">
-            </div>
-            <div class="input-group">
-                <label>🖼 Avatar URL</label>
-                <input type="text" id="editAvatarUrl" placeholder="https://...">
-            </div>
-            <div class="input-group">
-                <label>📁 Or Upload Image</label>
-                <input type="file" id="editAvatarFile" accept="image/*">
-            </div>
-            <button class="btn-secondary full-width" id="useDiscordAvatarBtn" style="margin-top:-4px;">
-                💬 Use Discord Avatar
-            </button>
+            <div class="input-group"><label>👤 Username</label><input type="text" id="editUsername" maxlength="20" placeholder="e.g. Gurika"></div>
+            <div class="input-group"><label>🏷 Nickname / Tagline</label><input type="text" id="editNickname" maxlength="25" placeholder="e.g. Fullstack Dev"></div>
+            <div class="input-group"><label>🖼 Avatar URL</label><input type="text" id="editAvatarUrl" placeholder="https://..."></div>
+            <div class="input-group"><label>📁 Or Upload Image</label><input type="file" id="editAvatarFile" accept="image/*"></div>
+            <button class="btn-secondary full-width" id="useDiscordAvatarBtn" style="margin-top:-4px;">💬 Use Discord Avatar</button>
             <button class="btn-primary full-width" id="saveProfileBtn">💾 Save Changes</button>
             <p class="auth-error" id="profileSaveMsg"></p>
         </div>
-
         <div class="profile-tab-content" id="ptab-activity" style="display:none;">
             <h4>🎮 What are you playing?</h4>
-            <div class="input-group">
-                <select id="gameSelect"></select>
-            </div>
+            <div class="input-group"><select id="gameSelect"></select></div>
             <button class="btn-primary full-width" id="setGameBtn">🎮 Set as Playing</button>
             <button class="btn-secondary full-width" id="clearGameBtn" style="margin-top:10px;">🗑 Clear Game Status</button>
-            <p class="dim small" style="text-align:center; margin-top:14px;">
-                🎯 სხვები ხედავენ რა თამაშს თამაშობ — Photo Mode-შიც გამოჩნდება
-            </p>
+            <p class="dim small" style="text-align:center; margin-top:14px;">🎯 სხვები ხედავენ რა თამაშს თამაშობ</p>
         </div>
-
         <div class="profile-tab-content" id="ptab-frames" style="display:none;">
             <h4>🎨 Choose Frame</h4>
             <div class="frames-grid" id="framesGrid"></div>
@@ -273,25 +233,16 @@
             <div class="animations-grid" id="animationsGrid"></div>
             <button class="btn-primary full-width" style="margin-top:20px;" id="saveFrameBtn">💾 Save Frame</button>
         </div>
-
         <div class="profile-tab-content" id="ptab-admin" style="display:none;">
             <h4>👑 Admin Panel</h4>
             <div class="admin-users" id="adminUsersList"></div>
             <button class="btn-secondary full-width" style="margin-top:15px;" id="resetAllSlotsBtn">🔄 Reset All Member Slots</button>
-
             <h4 style="margin-top:22px;">⭐ Recommend a Game</h4>
-            <p class="dim small" style="margin-bottom:10px;">აირჩიე თამაში — საიტზე გამოჩნდება "Admin's Pick" ბანერად</p>
-            <div class="input-group">
-                <select id="recommendGameSelect"></select>
-            </div>
-            <button class="btn-primary full-width" id="setRecommendationBtn" style="margin-top:10px;">
-                👑 Set as Admin's Pick
-            </button>
-            <button class="btn-secondary full-width" id="clearRecommendationBtn" style="margin-top:8px;">
-                🗑 Clear Recommendation
-            </button>
+            <p class="dim small" style="margin-bottom:10px;">აირჩიე თამაში — გამოჩნდება "Admin's Pick" ბანერად</p>
+            <div class="input-group"><select id="recommendGameSelect"></select></div>
+            <button class="btn-primary full-width" id="setRecommendationBtn" style="margin-top:10px;">👑 Set as Admin's Pick</button>
+            <button class="btn-secondary full-width" id="clearRecommendationBtn" style="margin-top:8px;">🗑 Clear Recommendation</button>
         </div>
-
         <div class="profile-actions">
             <button class="btn-secondary full-width" id="logoutBtn">🚪 Logout</button>
         </div>
@@ -306,7 +257,6 @@
             <h2>My Playlist</h2>
             <div class="line"></div>
         </div>
-
         <div class="music-current-box" id="musicCurrentBox">
             <div class="music-disc" id="musicDisc">💿</div>
             <div class="music-meta">
@@ -314,7 +264,6 @@
                 <div class="music-name" id="musicName">აირჩიე სიმღერა ან ჩასვი ლინკი</div>
             </div>
         </div>
-
         <div class="music-add-box">
             <div class="input-group" style="margin-bottom:10px;">
                 <label>🔗 Add YouTube Link to Playlist</label>
@@ -322,21 +271,11 @@
             </div>
             <button class="btn-primary full-width" id="addToPlaylistBtn">➕ Add to Playlist</button>
         </div>
-
         <div class="playlist-section">
-            <div class="playlist-header">
-                <h4>📋 Saved Songs (<span id="playlistCount">0</span>)</h4>
-            </div>
-            <div class="playlist-list" id="playlistList">
-                <div class="playlist-empty">ჯერ არაფერია შენახული</div>
-            </div>
+            <div class="playlist-header"><h4>📋 Saved Songs (<span id="playlistCount">0</span>)</h4></div>
+            <div class="playlist-list" id="playlistList"><div class="playlist-empty">ჯერ არაფერია შენახული</div></div>
         </div>
-
         <button class="btn-secondary full-width" id="stopMusicBtn" style="margin-top:16px;">⏹ Stop Music</button>
-
-        <p class="dim small" style="text-align:center; margin-top:14px;">
-            🎧 სხვები ხედავენ რას უსმენ პროფილის ბარათზე
-        </p>
     </div>
 </div>
 
@@ -375,37 +314,96 @@
                     <label class="photo-option-label">🎮 Featured Game (bottom)</label>
                     <select id="photoFeaturedGame"></select>
                 </div>
-
                 <div class="photo-option-group">
-                    <label class="photo-toggle">
-                        <input type="checkbox" id="photoShowMusic" checked>
-                        <span>🎵 Show Music</span>
-                    </label>
-                    <label class="photo-toggle">
-                        <input type="checkbox" id="photoShowGames" checked>
-                        <span>🎮 Show Games</span>
-                    </label>
+                    <label class="photo-toggle"><input type="checkbox" id="photoShowMusic" checked><span>🎵 Show Music</span></label>
+                    <label class="photo-toggle"><input type="checkbox" id="photoShowGames" checked><span>🎮 Show Games</span></label>
                 </div>
-
                 <div class="photo-option-group">
                     <label class="photo-option-label">🎨 Background</label>
                     <div class="photo-bg-grid" id="photoBgGrid"></div>
                 </div>
-
                 <div class="photo-option-group">
                     <label class="photo-option-label">💬 Title</label>
                     <input type="text" id="photoCaption" maxlength="40" placeholder="Our Gaming Squad">
                 </div>
-
                 <div class="photo-option-group">
                     <label class="photo-option-label">🔗 Site Link</label>
                     <input type="text" id="photoSiteLink" maxlength="50" value="mission-play.netlify.app">
                 </div>
             </div>
 
+            <!-- ⚙️ MORE SETTINGS -->
+            <details class="photo-more-settings" id="photoMoreSettings">
+                <summary>
+                    <span>⚙️ More Settings</span>
+                    <span class="arrow">▼</span>
+                </summary>
+                <div class="photo-options photo-options-inside">
+
+                    <div class="photo-option-group">
+                        <label class="photo-toggle"><input type="checkbox" id="photoShowDeveloper" checked><span>👑 Show DEVELOPER badge</span></label>
+                    </div>
+
+                    <div class="photo-option-group">
+                        <label class="photo-option-label">✨ Visual Effects</label>
+                        <label class="photo-toggle"><input type="checkbox" id="photoSparkles"><span>✨ Sparkles</span></label>
+                        <label class="photo-toggle"><input type="checkbox" id="photoVignette"><span>🌑 Vignette</span></label>
+                        <label class="photo-toggle"><input type="checkbox" id="photoNoise"><span>📼 Film Grain</span></label>
+                        <label class="photo-toggle"><input type="checkbox" id="photoScanlines"><span>📺 Scanlines</span></label>
+                        <label class="photo-toggle"><input type="checkbox" id="photoLightRays"><span>☀️ Light Rays</span></label>
+                    </div>
+
+                    <div class="photo-option-group">
+                        <label class="photo-option-label">📐 Layout</label>
+                        <select id="photoLayout">
+                            <option value="grid3">⬛⬛⬛ Grid 3 (Default)</option>
+                            <option value="grid2">⬛⬛ Grid 2 (Bigger)</option>
+                            <option value="center-hero">👑 Center Hero</option>
+                            <option value="film-strip">🎞 Film Strip</option>
+                            <option value="minimal">◻️ Minimal</option>
+                        </select>
+                    </div>
+
+                    <div class="photo-option-group">
+                        <label class="photo-option-label">👤 Avatar Size: <span id="photoAvatarSizeLabel">58</span>px</label>
+                        <input type="range" id="photoAvatarSize" min="40" max="90" value="58" step="2">
+                    </div>
+
+                    <div class="photo-option-group">
+                        <label class="photo-option-label">📏 Card Spacing</label>
+                        <select id="photoCardSpacing">
+                            <option value="compact">Compact</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="spacious">Spacious</option>
+                        </select>
+                    </div>
+
+                    <div class="photo-option-group">
+                        <label class="photo-option-label">⬤ Avatar Shape</label>
+                        <select id="photoAvatarShape">
+                            <option value="circle" selected>Circle</option>
+                            <option value="rounded">Rounded</option>
+                            <option value="square">Square</option>
+                        </select>
+                    </div>
+
+                    <div class="photo-option-group">
+                        <label class="photo-option-label">🔄 Member Order</label>
+                        <div id="photoMemberOrder" class="photo-member-order"></div>
+                    </div>
+
+                </div>
+            </details>
+
             <button class="btn-primary full-width photo-download-btn" id="photoDownloadBtn">
                 ⬇️ Download PNG (1600×900)
             </button>
+            <button class="btn-secondary full-width photo-video-btn" id="photoVideoBtn">
+                🎬 Download Video (WebM, 2s)
+            </button>
+            <p class="dim small" style="text-align:center; margin-top:8px;">
+                💡 ვიდეოში ჩანს ანიმაციები (sparkles, rays)
+            </p>
         </div>
     </div>
 </div>

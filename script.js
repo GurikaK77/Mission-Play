@@ -1,5 +1,5 @@
 /* ================================================================
-   MISSION: PLAY — script.js (FINAL)
+   MISSION: PLAY — script.js v3 (Photo Mode Extended)
    ================================================================ */
 
 const firebaseConfig = {
@@ -43,10 +43,23 @@ let currentMusic = null;
 let photoOptions = {
     showMusic: true,
     showGames: true,
+    showDeveloper: true,      // 👑
     bg: 'gold',
     caption: '',
     siteLink: 'mission-play.netlify.app',
-    featuredGame: 'auto'
+    featuredGame: 'auto',
+    // Effects (3-7)
+    sparkles: false,
+    vignette: false,
+    noise: false,
+    scanlines: false,
+    lightRays: false,
+    // Layout (8-15)
+    layout: 'grid3',
+    avatarSize: 58,
+    cardSpacing: 'normal',
+    avatarShape: 'circle',
+    memberOrder: ['DarkTeddy', 'KEROSENE', 'ArLovelyy']
 };
 
 const PHOTO_BACKGROUNDS = [
@@ -107,13 +120,10 @@ function defaultAvatar(name) {
 function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
-
-/* ============ HELPERS ============ */
 function getUsername(userData, memberName) {
     return userData?.username || userData?.nickname || memberName;
 }
 function getNickname(userData, memberFallback) {
-    // If old data has nickname === username, use member fallback (default role)
     if (userData?.nickname && userData.nickname !== userData.username) return userData.nickname;
     return userData?.nickname || memberFallback || 'Gamer';
 }
@@ -136,20 +146,13 @@ async function silentMigrate() {
         }
     } catch (e) { console.warn('Migration:', e.message); }
 }
-
 async function migrateUserFields(uid, userData) {
-    // nickname → username migration
     const updates = {};
+    if (!userData.username && userData.nickname) updates.username = userData.nickname;
     if (!userData.username && userData.nickname) {
-        updates.username = userData.nickname;
-    }
-    // Ensure nickname (tagline) exists
-    if (!userData.username && userData.nickname) {
-        // old schema: only nickname existed, which was actually username
         const m = MEMBERS.find(x => x.name === userData.memberName);
         updates.nickname = m?.role || 'Gamer';
     } else if (userData.nickname && userData.username && userData.nickname === userData.username) {
-        // Both exist and are equal → nickname was never set properly
         const m = MEMBERS.find(x => x.name === userData.memberName);
         updates.nickname = m?.role || 'Gamer';
     }
@@ -157,14 +160,11 @@ async function migrateUserFields(uid, userData) {
         try {
             await db.ref('users/' + uid).update(updates);
             Object.assign(userData, updates);
-            if (userData.memberName) {
-                await db.ref('publicProfiles/' + userData.memberName).update(updates).catch(() => {});
-            }
+            if (userData.memberName) await db.ref('publicProfiles/' + userData.memberName).update(updates).catch(() => {});
         } catch (e) { console.warn('Migrate user:', e.message); }
     }
     return userData;
 }
-
 async function syncPublicProfile(memberName, data) {
     if (!memberName) return;
     try { await db.ref('publicProfiles/' + memberName).update(data); }
@@ -185,7 +185,6 @@ function listenNowPlaying() {
         renderHeroProfiles();
     }, () => {});
 }
-
 async function setNowPlaying(data) {
     if (!firebaseUser || !currentUser) return;
     try {
@@ -211,14 +210,11 @@ function listenNowPlayingGame() {
         nowPlayingGameByMember = {};
         for (const uid in np) {
             const data = np[uid];
-            if (data && data.memberName && data.gameTitle) {
-                nowPlayingGameByMember[data.memberName] = data;
-            }
+            if (data && data.memberName && data.gameTitle) nowPlayingGameByMember[data.memberName] = data;
         }
         renderHeroProfiles();
     }, () => {});
 }
-
 async function setNowPlayingGame(gameId) {
     if (!firebaseUser || !currentUser) return;
     try {
@@ -229,13 +225,7 @@ async function setNowPlayingGame(gameId) {
         } else {
             const g = gamesData.find(x => x.id === parseInt(gameId));
             if (!g) return;
-            const payload = {
-                memberName: currentUser.memberName,
-                gameId: g.id,
-                gameTitle: g.title,
-                gameImage: g.image,
-                updatedAt: Date.now()
-            };
+            const payload = { memberName: currentUser.memberName, gameId: g.id, gameTitle: g.title, gameImage: g.image, updatedAt: Date.now() };
             await db.ref('nowPlayingGame/' + firebaseUser.uid).set(payload);
             await db.ref('publicProfiles/' + currentUser.memberName + '/game').set(payload).catch(() => {});
             nowPlayingGameByMember[currentUser.memberName] = payload;
@@ -280,17 +270,13 @@ function listenMemberSlots() {
         }
     });
 }
-
 function listenPublicProfiles() {
     db.ref('publicProfiles').on('value', snap => {
         const pp = snap.val() || {};
-        for (const name in pp) {
-            memberUserData[name] = Object.assign({}, memberUserData[name] || {}, pp[name]);
-        }
+        for (const name in pp) memberUserData[name] = Object.assign({}, memberUserData[name] || {}, pp[name]);
         renderHeroProfiles();
     }, () => {});
 }
-
 function listenUsers() {
     if (!firebaseUser) return;
     db.ref('users').on('value', snap => {
@@ -302,9 +288,7 @@ function listenUsers() {
         renderHeroProfiles();
     }, () => {});
 }
-
 function allMembersTaken() { return MEMBERS.every(m => memberSlots[m.name]); }
-
 function renderMemberOptions() {
     const container = $('memberOptions'); if (!container) return;
     container.innerHTML = MEMBERS.map(m => {
@@ -324,7 +308,6 @@ function renderMemberOptions() {
         selectedMember = opt.dataset.member;
     }));
 }
-
 function checkRegistrationAvailability() {
     const registerForm = $('registerForm'), loginForm = $('loginForm'), noReg = $('noRegisterMsg'), tabRegister = $('tabRegister');
     if (allMembersTaken()) {
@@ -368,7 +351,6 @@ function renderHeroProfiles() {
                 <span class="game-title">${escapeHtml(game.gameTitle)}</span>
             </div>` : '';
 
-        // Only show "Available" badge if slot is empty (deleted)
         const availableBadge = isClaimed ? '' : '<span class="claimed-badge">Available</span>';
 
         return `
@@ -392,6 +374,8 @@ function openPhotoMode() {
     document.body.style.overflow = 'hidden';
     renderPhotoBgGrid();
     populatePhotoFeaturedGame();
+    renderMemberOrderUI();
+    syncPhotoControlsToState();
     updatePhotoScale();
     renderPhotoPreview();
 }
@@ -433,6 +417,55 @@ function populatePhotoFeaturedGame() {
     select.value = photoOptions.featuredGame || 'auto';
 }
 
+function syncPhotoControlsToState() {
+    const map = {
+        photoShowMusic: 'showMusic', photoShowGames: 'showGames', photoShowDeveloper: 'showDeveloper',
+        photoSparkles: 'sparkles', photoVignette: 'vignette', photoNoise: 'noise',
+        photoScanlines: 'scanlines', photoLightRays: 'lightRays'
+    };
+    for (const id in map) {
+        const el = $(id); if (el) el.checked = !!photoOptions[map[id]];
+    }
+    if ($('photoLayout')) $('photoLayout').value = photoOptions.layout;
+    if ($('photoAvatarSize')) $('photoAvatarSize').value = photoOptions.avatarSize;
+    if ($('photoAvatarSizeLabel')) $('photoAvatarSizeLabel').textContent = photoOptions.avatarSize;
+    if ($('photoCardSpacing')) $('photoCardSpacing').value = photoOptions.cardSpacing;
+    if ($('photoAvatarShape')) $('photoAvatarShape').value = photoOptions.avatarShape;
+    if ($('photoCaption')) $('photoCaption').value = photoOptions.caption;
+    if ($('photoSiteLink')) $('photoSiteLink').value = photoOptions.siteLink;
+}
+
+function renderMemberOrderUI() {
+    const container = $('photoMemberOrder'); if (!container) return;
+    container.innerHTML = photoOptions.memberOrder.map((name, idx) => {
+        const m = MEMBERS.find(x => x.name === name);
+        if (!m) return '';
+        const userData = memberUserData[name];
+        const username = getUsername(userData, name);
+        const avatar = userData?.avatar || m.avatar;
+        return `
+            <div class="photo-member-item" data-name="${name}">
+                <img src="${avatar}" alt="">
+                <span class="name">${escapeHtml(username)}</span>
+                <button data-dir="up" ${idx === 0 ? 'disabled' : ''}>▲</button>
+                <button data-dir="down" ${idx === photoOptions.memberOrder.length - 1 ? 'disabled' : ''}>▼</button>
+            </div>`;
+    }).join('');
+    container.querySelectorAll('.photo-member-item button').forEach(btn => btn.addEventListener('click', () => {
+        const name = btn.closest('.photo-member-item').dataset.name;
+        const idx = photoOptions.memberOrder.indexOf(name);
+        const dir = btn.dataset.dir;
+        if (dir === 'up' && idx > 0) {
+            [photoOptions.memberOrder[idx-1], photoOptions.memberOrder[idx]] = [photoOptions.memberOrder[idx], photoOptions.memberOrder[idx-1]];
+        } else if (dir === 'down' && idx < photoOptions.memberOrder.length - 1) {
+            [photoOptions.memberOrder[idx+1], photoOptions.memberOrder[idx]] = [photoOptions.memberOrder[idx], photoOptions.memberOrder[idx+1]];
+        }
+        renderMemberOrderUI();
+        renderPhotoPreview();
+    }));
+}
+
+/* ============ RENDER PREVIEW ============ */
 function renderPhotoPreview() {
     const preview = $('photoPreview'); if (!preview) return;
     const bg = PHOTO_BACKGROUNDS.find(b => b.id === photoOptions.bg) || PHOTO_BACKGROUNDS[0];
@@ -451,30 +484,30 @@ function renderPhotoPreview() {
                 </div>`;
         }
     } else if (photoOptions.featuredGame === 'auto') {
-        // Get first game with image
-        const entries = MEMBERS.map(m => nowPlayingGameByMember[m.name]).filter(Boolean);
+        const entries = photoOptions.memberOrder.map(m => nowPlayingGameByMember[m]).filter(Boolean);
         if (entries.length) {
             const first = entries[0];
-            const names = entries.map(e => e.gameTitle);
-            const unique = [...new Set(names)];
+            const names = [...new Set(entries.map(e => e.gameTitle))];
             featuredGameHtml = `
                 <div class="pp-featured-game">
                     ${first.gameImage ? `<img src="${first.gameImage}" class="pp-game-img" crossorigin="anonymous" onerror="this.style.display='none'">` : ''}
                     <span class="label">🎮 Now Playing</span>
-                    <span class="game-name">${unique.map(escapeHtml).join(' • ')}</span>
+                    <span class="game-name">${names.map(escapeHtml).join(' • ')}</span>
                 </div>`;
         }
     }
 
-    const membersHtml = MEMBERS.map(m => {
-        const isAdmin = m.name === 'KEROSENE';
-        const userData = memberUserData[m.name];
-        const username = getUsername(userData, m.name);
+    const membersHtml = photoOptions.memberOrder.map(name => {
+        const m = MEMBERS.find(x => x.name === name);
+        if (!m) return '';
+        const isAdmin = name === 'KEROSENE';
+        const userData = memberUserData[name];
+        const username = getUsername(userData, name);
         const nickname = getNickname(userData, m.role);
         const avatar = userData?.avatar || m.avatar;
         const frame = userData?.frame || (isAdmin ? 'royal' : 'gold');
-        const music = nowPlayingByMember[m.name];
-        const game = nowPlayingGameByMember[m.name];
+        const music = nowPlayingByMember[name];
+        const game = nowPlayingGameByMember[name];
 
         const badges = [];
         if (photoOptions.showMusic && music?.title && music?.playing) {
@@ -488,24 +521,52 @@ function renderPhotoPreview() {
         }
 
         const frameClass = 'pp-frame-' + (['gold','royal','neon','fire','ice','hacker','rainbow','legendary'].includes(frame) ? frame : 'none');
+        const devBadge = (isAdmin && photoOptions.showDeveloper) ? '<div class="pp-dev-badge">👑 DEVELOPER</div>' : '';
 
         return `
             <div class="pp-member ${isAdmin ? 'is-admin' : ''}">
-                <div class="pp-avatar-wrap">
+                <div class="pp-avatar-wrap shape-${photoOptions.avatarShape}" style="width:${photoOptions.avatarSize}px;height:${photoOptions.avatarSize}px">
                     <div class="pp-frame ${frameClass}"></div>
-                    <img src="${avatar}" alt="${escapeHtml(m.name)}" onerror="this.src='${defaultAvatar(m.name)}'" crossorigin="anonymous">
+                    <img src="${avatar}" alt="${escapeHtml(name)}" onerror="this.src='${defaultAvatar(name)}'" crossorigin="anonymous">
                 </div>
                 <div class="pp-name">
                     ${escapeHtml(username)}
                     ${isAdmin ? '<span class="crown">👑</span>' : ''}
                 </div>
                 <div class="pp-role">${escapeHtml(nickname)}</div>
+                ${devBadge}
                 ${badges.length ? `<div class="pp-badges">${badges.join('')}</div>` : ''}
             </div>`;
     }).join('');
 
+    // Effects HTML
+    const fxHtml = `
+        ${photoOptions.lightRays ? '<div class="pp-fx pp-fx-rays"></div>' : ''}
+        ${photoOptions.vignette ? '<div class="pp-fx pp-fx-vignette"></div>' : ''}
+        ${photoOptions.scanlines ? '<div class="pp-fx pp-fx-scanlines"></div>' : ''}
+        ${photoOptions.noise ? '<div class="pp-fx pp-fx-noise"></div>' : ''}
+    `;
+
+    // Sparkles
+    let sparklesHtml = '';
+    if (photoOptions.sparkles) {
+        const sparkles = Array.from({ length: 25 }, () => {
+            const x = Math.random() * 100;
+            const y = Math.random() * 100;
+            const delay = (Math.random() * 3).toFixed(2);
+            const dur = (2 + Math.random() * 2).toFixed(2);
+            return `<span class="pp-sparkle" style="left:${x}%;top:${y}%;animation-delay:${delay}s;animation-duration:${dur}s"></span>`;
+        }).join('');
+        sparklesHtml = `<div class="pp-sparkles">${sparkles}</div>`;
+    }
+
+    const membersClass = `pp-members layout-${photoOptions.layout} spacing-${photoOptions.cardSpacing}`;
+
     preview.innerHTML = `
-        <div class="pp-bg" style="background:${bg.css}"></div>
+        <div class="pp-bg" style="background:${bg.css}">
+            ${fxHtml}
+            ${sparklesHtml}
+        </div>
         <div class="pp-content">
             <div class="pp-header">
                 <div class="pp-logo">
@@ -514,23 +575,17 @@ function renderPhotoPreview() {
                 </div>
                 <div class="pp-badge-top">🏆 Gaming Hub 2026</div>
             </div>
-
             <div class="pp-title">${escapeHtml(title)}</div>
-
-            <div class="pp-members">${membersHtml}</div>
-
+            <div class="${membersClass}">${membersHtml}</div>
             ${featuredGameHtml}
-
             <div class="pp-footer">
-                <div class="pp-site">
-                    <span class="icon">🌐</span>
-                    <span>${escapeHtml(photoOptions.siteLink || 'mission-play.netlify.app')}</span>
-                </div>
+                <div class="pp-site"><span class="icon">🌐</span><span>${escapeHtml(photoOptions.siteLink || 'mission-play.netlify.app')}</span></div>
             </div>
         </div>
     `;
 }
 
+/* ============ DOWNLOAD PNG ============ */
 async function downloadPhoto() {
     const preview = $('photoPreview');
     if (!preview) return;
@@ -550,13 +605,7 @@ async function downloadPhoto() {
 
     try {
         const canvas = await html2canvas(clone, {
-            scale: 2,
-            backgroundColor: '#06060a',
-            useCORS: true,
-            allowTaint: true,
-            logging: false,
-            width: 800,
-            height: 450
+            scale: 2, backgroundColor: '#06060a', useCORS: true, allowTaint: true, logging: false, width: 800, height: 450
         });
         const link = document.createElement('a');
         link.download = `mission-play-${Date.now()}.png`;
@@ -566,6 +615,85 @@ async function downloadPhoto() {
     } catch (err) {
         console.error('Download error:', err);
         toast('❌ ' + err.message, 'error');
+    } finally {
+        document.body.removeChild(clone);
+        btn.textContent = origText;
+        btn.disabled = false;
+    }
+}
+
+/* ============ DOWNLOAD VIDEO (WebM) ============ */
+async function downloadVideo() {
+    if (!window.MediaRecorder) {
+        toast('❌ ბრაუზერი არ უჭერს მხარს ვიდეოს', 'error');
+        return;
+    }
+    const preview = $('photoPreview');
+    if (!preview) return;
+    const btn = $('photoVideoBtn');
+    const origText = btn.textContent;
+    btn.textContent = '⏳ Recording (2s)...';
+    btn.disabled = true;
+
+    // Clone with visible position (not fully off-screen so animations run)
+    const clone = preview.cloneNode(true);
+    clone.style.transform = 'none';
+    clone.style.position = 'fixed';
+    clone.style.left = '0';
+    clone.style.top = '0';
+    clone.style.width = '800px';
+    clone.style.height = '450px';
+    clone.style.opacity = '0.01';
+    clone.style.pointerEvents = 'none';
+    clone.style.zIndex = '-1';
+    document.body.appendChild(clone);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 1600;
+    canvas.height = 900;
+    const ctx = canvas.getContext('2d');
+
+    let mimeType = 'video/webm;codecs=vp9';
+    if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp8';
+    if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
+
+    const stream = canvas.captureStream(12);
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5000000 });
+    const chunks = [];
+    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    const stopped = new Promise(res => recorder.onstop = res);
+
+    try {
+        recorder.start();
+        const totalFrames = 24; // 2s at 12fps
+        const frameDelay = 1000 / 12;
+
+        // Wait for animation start
+        await new Promise(r => requestAnimationFrame(r));
+        await new Promise(r => setTimeout(r, 100));
+
+        for (let i = 0; i < totalFrames; i++) {
+            const snapshot = await html2canvas(clone, {
+                scale: 2, backgroundColor: '#06060a', useCORS: true, allowTaint: true, logging: false, width: 800, height: 450
+            });
+            ctx.clearRect(0, 0, 1600, 900);
+            ctx.drawImage(snapshot, 0, 0, 1600, 900);
+            await new Promise(r => setTimeout(r, frameDelay));
+        }
+
+        recorder.stop();
+        await stopped;
+
+        const blob = new Blob(chunks, { type: mimeType });
+        const link = document.createElement('a');
+        link.download = `mission-play-${Date.now()}.webm`;
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        toast('✅ ვიდეო ჩამოიტვირთა (WebM)', 'success');
+    } catch (err) {
+        console.error('Video error:', err);
+        toast('❌ ' + err.message, 'error');
+        try { recorder.stop(); } catch {}
     } finally {
         document.body.removeChild(clone);
         btn.textContent = origText;
@@ -663,24 +791,18 @@ $('registerForm')?.addEventListener('submit', async (e) => {
         const memberInfo = MEMBERS.find(m => m.name === selectedMember);
         try {
             await saveUserRecord(uid, {
-                email,
-                memberName: selectedMember,
-                username: selectedMember,
-                nickname: memberInfo.role,   // default tagline
+                email, memberName: selectedMember,
+                username: selectedMember, nickname: memberInfo.role,
                 avatar: memberInfo.avatar,
                 frame: role === 'admin' ? 'royal' : 'gold',
                 frameAnimation: role === 'admin' ? 'glow' : 'none',
-                theme: localStorage.getItem('mp-theme') || 'royal-gold',
-                role,
-                createdAt: Date.now()
+                theme: localStorage.getItem('mp-theme') || 'royal-gold', role, createdAt: Date.now()
             });
             await syncPublicProfile(selectedMember, {
-                username: selectedMember,
-                nickname: memberInfo.role,
+                username: selectedMember, nickname: memberInfo.role,
                 avatar: memberInfo.avatar,
                 frame: role === 'admin' ? 'royal' : 'gold',
-                frameAnimation: role === 'admin' ? 'glow' : 'none',
-                role
+                frameAnimation: role === 'admin' ? 'glow' : 'none', role
             });
         } catch (dbErr) {
             await db.ref('memberSlots/' + selectedMember).remove().catch(() => {});
@@ -701,7 +823,6 @@ $('loginForm')?.addEventListener('submit', async (e) => {
     } catch (err) { errEl.textContent = '❌ ' + (err.message || 'Login failed'); }
 });
 
-/* ============ GOOGLE AUTH ============ */
 async function googleAuth(isRegister) {
     const errEl = isRegister ? $('registerError') : $('loginError');
     if (errEl) { errEl.textContent = ''; errEl.className = 'auth-error'; }
@@ -736,24 +857,18 @@ async function handleGoogleResult(user, isRegister, pendingMember) {
         const initialAvatar = user.photoURL || memberInfo.avatar;
         const initialUsername = user.displayName || pendingMember;
         await saveUserRecord(user.uid, {
-            email: user.email,
-            memberName: pendingMember,
-            username: initialUsername,
-            nickname: memberInfo.role,
+            email: user.email, memberName: pendingMember,
+            username: initialUsername, nickname: memberInfo.role,
             avatar: initialAvatar,
             frame: role === 'admin' ? 'royal' : 'gold',
             frameAnimation: role === 'admin' ? 'glow' : 'none',
-            theme: localStorage.getItem('mp-theme') || 'royal-gold',
-            role,
-            createdAt: Date.now()
+            theme: localStorage.getItem('mp-theme') || 'royal-gold', role, createdAt: Date.now()
         });
         await syncPublicProfile(pendingMember, {
-            username: initialUsername,
-            nickname: memberInfo.role,
+            username: initialUsername, nickname: memberInfo.role,
             avatar: initialAvatar,
             frame: role === 'admin' ? 'royal' : 'gold',
-            frameAnimation: role === 'admin' ? 'glow' : 'none',
-            role
+            frameAnimation: role === 'admin' ? 'glow' : 'none', role
         });
         toast('🎉 Welcome, ' + pendingMember + '!', 'success');
         closeAuthModal();
@@ -773,7 +888,6 @@ auth.onAuthStateChanged(async (user) => {
         const snap = await db.ref('users/' + user.uid).once('value');
         if (snap.exists()) {
             currentUser = snap.val();
-            // Migrate old nickname → username / nickname
             currentUser = await migrateUserFields(user.uid, currentUser);
             if (currentUser.theme) applyTheme(currentUser.theme);
             updateAuthUI();
@@ -783,12 +897,8 @@ auth.onAuthStateChanged(async (user) => {
             listenPlaylist();
             listenUsers();
             populateGameSelect();
-            if (currentUser.music?.videoId) {
-                currentMusic = { videoId: currentUser.music.videoId, title: currentUser.music.title || '🎵 Track' };
-            }
+            if (currentUser.music?.videoId) currentMusic = { videoId: currentUser.music.videoId, title: currentUser.music.title || '🎵 Track' };
             updateMusicUI();
-        } else {
-            console.log('⏳ User without record — waiting for handleGoogleResult');
         }
     } else {
         currentUser = null;
@@ -875,9 +985,7 @@ $('saveProfileBtn')?.addEventListener('click', async () => {
     try {
         await db.ref('users/' + firebaseUser.uid).update({ username, nickname, avatar });
         await syncPublicProfile(currentUser.memberName, { username, nickname, avatar });
-        currentUser.username = username;
-        currentUser.nickname = nickname;
-        currentUser.avatar = avatar;
+        currentUser.username = username; currentUser.nickname = nickname; currentUser.avatar = avatar;
         updateProfileHeader(); updateAuthUI();
         msg.textContent = '✅ Profile saved!'; msg.className = 'auth-error success';
         toast('💾 Profile updated', 'success');
@@ -918,7 +1026,6 @@ function fileToBase64(file) {
         reader.readAsDataURL(file);
     });
 }
-
 function renderFramesGrid() {
     const grid = $('framesGrid'); if (!grid) return;
     const userAvatar = currentUser?.avatar || defaultAvatar(currentUser?.username || 'U');
@@ -943,7 +1050,6 @@ function renderAnimationsGrid() {
         $('profileAvatarWrapper').dataset.anim = previewAnim;
     }));
 }
-
 $('saveFrameBtn')?.addEventListener('click', async () => {
     if (!currentUser || !firebaseUser) return;
     try {
@@ -954,7 +1060,6 @@ $('saveFrameBtn')?.addEventListener('click', async () => {
         toast('✨ Frame saved!', 'success');
     } catch (err) { toast('❌ ' + err.message, 'error'); }
 });
-
 $('logoutBtn')?.addEventListener('click', async () => {
     if (firebaseUser) {
         await db.ref('users/' + firebaseUser.uid + '/music/playing').set(false).catch(() => {});
@@ -1181,10 +1286,7 @@ function createGameCard(game) {
                 <span class="genre">${game.genre}</span>
                 <h3>${game.title}</h3>
                 <p class="desc">${game.desc}</p>
-                <div class="meta">
-                    <span>⭐ <span class="rating">${game.rating}</span></span>
-                    <span>📥 ${game.downloads}</span>
-                </div>
+                <div class="meta"><span>⭐ <span class="rating">${game.rating}</span></span><span>📥 ${game.downloads}</span></div>
                 <a href="${game.link}" target="_blank" rel="noopener" class="btn-download">⬇️ Download</a>
             </div>
         </div>`;
@@ -1377,7 +1479,6 @@ function animateParticles() {
     }
     requestAnimationFrame(animateParticles);
 }
-
 document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', function (e) {
     const href = this.getAttribute('href'); if (href === '#') return;
     const target = document.querySelector(href);
@@ -1394,13 +1495,32 @@ $('addToPlaylistBtn')?.addEventListener('click', addToPlaylist);
 $('ytLinkInput')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addToPlaylist(); } });
 $('stopMusicBtn')?.addEventListener('click', stopMusic);
 $('photoDownloadBtn')?.addEventListener('click', downloadPhoto);
+$('photoVideoBtn')?.addEventListener('click', downloadVideo);
 
-// Photo mode option listeners
+// Photo basic options
 $('photoShowMusic')?.addEventListener('change', (e) => { photoOptions.showMusic = e.target.checked; renderPhotoPreview(); });
 $('photoShowGames')?.addEventListener('change', (e) => { photoOptions.showGames = e.target.checked; renderPhotoPreview(); });
+$('photoShowDeveloper')?.addEventListener('change', (e) => { photoOptions.showDeveloper = e.target.checked; renderPhotoPreview(); });
 $('photoCaption')?.addEventListener('input', (e) => { photoOptions.caption = e.target.value; renderPhotoPreview(); });
 $('photoSiteLink')?.addEventListener('input', (e) => { photoOptions.siteLink = e.target.value || 'mission-play.netlify.app'; renderPhotoPreview(); });
 $('photoFeaturedGame')?.addEventListener('change', (e) => { photoOptions.featuredGame = e.target.value; renderPhotoPreview(); });
+
+// Photo effects
+$('photoSparkles')?.addEventListener('change', (e) => { photoOptions.sparkles = e.target.checked; renderPhotoPreview(); });
+$('photoVignette')?.addEventListener('change', (e) => { photoOptions.vignette = e.target.checked; renderPhotoPreview(); });
+$('photoNoise')?.addEventListener('change', (e) => { photoOptions.noise = e.target.checked; renderPhotoPreview(); });
+$('photoScanlines')?.addEventListener('change', (e) => { photoOptions.scanlines = e.target.checked; renderPhotoPreview(); });
+$('photoLightRays')?.addEventListener('change', (e) => { photoOptions.lightRays = e.target.checked; renderPhotoPreview(); });
+
+// Photo layout
+$('photoLayout')?.addEventListener('change', (e) => { photoOptions.layout = e.target.value; renderPhotoPreview(); });
+$('photoAvatarSize')?.addEventListener('input', (e) => {
+    photoOptions.avatarSize = parseInt(e.target.value);
+    if ($('photoAvatarSizeLabel')) $('photoAvatarSizeLabel').textContent = photoOptions.avatarSize;
+    renderPhotoPreview();
+});
+$('photoCardSpacing')?.addEventListener('change', (e) => { photoOptions.cardSpacing = e.target.value; renderPhotoPreview(); });
+$('photoAvatarShape')?.addEventListener('change', (e) => { photoOptions.avatarShape = e.target.value; renderPhotoPreview(); });
 
 $('authModal')?.addEventListener('click', (e) => { if (e.target.id === 'authModal') closeAuthModal(); });
 $('profileModal')?.addEventListener('click', (e) => { if (e.target.id === 'profileModal') closeProfileModal(); });
